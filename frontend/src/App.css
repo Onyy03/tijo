@@ -223,3 +223,63 @@
 .terminal-status--error .terminal-status__text {
   color: var(--color-danger);
 }
+
+.button--success {
+  color: #ffffff;
+  background: var(--color-success);
+}
+
+.button--success:hover:not(:disabled) {
+  background: #156d2f;
+}
+
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pending__title {
+  font-size: 1rem;
+}
+
+.pending__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.pending__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pending__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+}
+
+.pending__details {
+  display: flex;
+  flex-direction: column;
+}
+
+.pending__amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.pending__actions {
+  display: flex;
+  gap: 8px;
+}

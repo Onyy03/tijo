@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { formatMoney } from '../format.js'
 import BlikCodeCard from './BlikCodeCard.jsx'
+import PendingPayments from './PendingPayments.jsx'
 
 function BankApp() {
   const [accounts, setAccounts] = useState([])
   const [accountId, setAccountId] = useState(null)
   const [account, setAccount] = useState(null)
+  const [balanceVersion, setBalanceVersion] = useState(0)
+  const [codeRound, setCodeRound] = useState(0)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -36,7 +39,11 @@ function BankApp() {
     return () => {
       active = false
     }
-  }, [accountId])
+  }, [accountId, balanceVersion])
+
+  const refreshBalance = () => setBalanceVersion((version) => version + 1)
+  // A code is single-use: once a payment arrives, the shown code is spent.
+  const clearUsedCode = () => setCodeRound((round) => round + 1)
 
   return (
     <section className="panel" aria-labelledby="bank-app-title">
@@ -67,7 +74,17 @@ function BankApp() {
         </div>
       )}
 
-      {accountId !== null && <BlikCodeCard key={accountId} accountId={accountId} />}
+      {accountId !== null && (
+        <>
+          <PendingPayments
+            key={accountId}
+            accountId={accountId}
+            onPaymentArrived={clearUsedCode}
+            onPaymentDecided={refreshBalance}
+          />
+          <BlikCodeCard key={`${accountId}-${codeRound}`} accountId={accountId} />
+        </>
+      )}
 
       {error && (
         <p className="message message--error" role="alert">
