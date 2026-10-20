@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from app.accounts.models import Account
@@ -15,6 +15,13 @@ class FixedClock:
 
     def now(self) -> datetime:
         return self._now
+
+
+class MutableClock(FixedClock):
+    """A clock that tests can move forward, e.g. past the lifetime of a BLIK code."""
+
+    def advance(self, seconds: int) -> None:
+        self._now += timedelta(seconds=seconds)
 
 
 class SequenceCodeGenerator:
