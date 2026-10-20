@@ -15,3 +15,6 @@ class AccountService:
         if account is None:
             raise NotFoundError(ErrorCode.ACCOUNT_NOT_FOUND, "Nie znaleziono konta")
         return account
+
+    def find_by_phone_number(self, phone_number: str) -> Account | None:
+        return self._accounts.find_by_phone_number(phone_number)

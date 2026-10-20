@@ -9,6 +9,8 @@ from app.extensions import db
 
 class HistoryEntryType(StrEnum):
     PAYMENT = "PAYMENT"
+    TRANSFER_OUT = "TRANSFER_OUT"
+    TRANSFER_IN = "TRANSFER_IN"
 
 
 class HistoryEntry(db.Model):

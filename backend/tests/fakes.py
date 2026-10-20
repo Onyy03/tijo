@@ -37,6 +37,16 @@ class InMemoryAccountRepository:
     def find_by_id(self, account_id: int) -> Account | None:
         return self._accounts.get(account_id)
 
+    def find_by_phone_number(self, phone_number: str) -> Account | None:
+        return next(
+            (
+                account
+                for account in self._accounts.values()
+                if account.phone_number == phone_number
+            ),
+            None,
+        )
+
 
 class InMemoryBlikCodeRepository:
     def __init__(self, *codes: BlikCode) -> None:

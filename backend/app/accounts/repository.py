@@ -10,3 +10,6 @@ class AccountRepository:
 
     def find_by_id(self, account_id: int) -> Account | None:
         return db.session.get(Account, account_id)
+
+    def find_by_phone_number(self, phone_number: str) -> Account | None:
+        return db.session.scalar(select(Account).where(Account.phone_number == phone_number))
