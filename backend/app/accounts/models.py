@@ -17,3 +17,6 @@ class Account(db.Model):
         if amount_cents > self.balance_cents:
             raise BusinessError(ErrorCode.INSUFFICIENT_FUNDS, "Niewystarczające środki na koncie")
         self.balance_cents -= amount_cents
+
+    def deposit(self, amount_cents: int) -> None:
+        self.balance_cents += amount_cents
