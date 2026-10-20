@@ -1,0 +1,767 @@
+{
+  "info": {
+    "description": "API symulatora p\u0142atno\u015bci BLIK. Aplikacja bankowa generuje kod (`POST /api/accounts/{account_id}/blik-codes`), terminal sklepu tworzy nim p\u0142atno\u015b\u0107 (`POST /api/payments`), a aplikacja bankowa j\u0105 zatwierdza lub odrzuca.\n\nKwoty s\u0105 przesy\u0142ane jako tekst z dwoma miejscami po przecinku, np. `\"25.00\"`. Daty s\u0105 w UTC. B\u0142\u0119dy maj\u0105 posta\u0107 `{\"code\": ..., \"message\": ...}`, a b\u0142\u0119dy walidacji (400) dodatkowo pole `errors`.",
+    "title": "MiniBlik API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/accounts": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Account"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Lista wszystkich kont",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono konta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Dane i saldo konta",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "account_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/accounts/{account_id}/blik-codes": {
+      "post": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono konta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlikCode"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Wygenerowanie kodu BLIK wa\u017cnego 120 sekund (poprzedni aktywny kod zostaje anulowany)",
+        "tags": [
+          "blik_codes"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "account_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/payments": {
+      "post": {
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BAD_REQUEST"
+          },
+          "422": {
+            "description": "Kod wygas\u0142 lub by\u0142 ju\u017c u\u017cyty, niepoprawna kwota",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nieprawid\u0142owy kod BLIK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePayment"
+              }
+            }
+          }
+        },
+        "summary": "Rozpocz\u0119cie p\u0142atno\u015bci kodem BLIK w terminalu sklepu",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/payments/{payment_id}": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono p\u0142atno\u015bci",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Status p\u0142atno\u015bci (odpytywany przez terminal)",
+        "tags": [
+          "payments"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "payment_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/payments/{payment_id}/confirm": {
+      "post": {
+        "responses": {
+          "422": {
+            "description": "Brak \u015brodk\u00f3w, p\u0142atno\u015b\u0107 wygas\u0142a lub jest rozliczona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nie znaleziono p\u0142atno\u015bci",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Zatwierdzenie p\u0142atno\u015bci w aplikacji bankowej",
+        "tags": [
+          "payments"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "payment_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/payments/{payment_id}/reject": {
+      "post": {
+        "responses": {
+          "422": {
+            "description": "P\u0142atno\u015b\u0107 jest ju\u017c rozliczona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nie znaleziono p\u0142atno\u015bci",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Odrzucenie p\u0142atno\u015bci w aplikacji bankowej",
+        "tags": [
+          "payments"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "payment_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/accounts/{account_id}/pending-payments": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono konta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Payment"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "P\u0142atno\u015bci czekaj\u0105ce na potwierdzenie w aplikacji bankowej",
+        "tags": [
+          "payments"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "account_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/transfers": {
+      "post": {
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BAD_REQUEST"
+          },
+          "422": {
+            "description": "Brak \u015brodk\u00f3w, przelew na w\u0142asny numer, z\u0142a kwota",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nie znaleziono konta nadawcy lub odbiorcy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryEntry"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransfer"
+              }
+            }
+          }
+        },
+        "summary": "Przelew na numer telefonu (zwraca wpis z historii nadawcy)",
+        "tags": [
+          "transfers"
+        ]
+      }
+    },
+    "/api/accounts/{account_id}/history": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono konta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryEntry"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Historia operacji na koncie, od najnowszej",
+        "tags": [
+          "history"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "account_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    }
+  },
+  "tags": [
+    {
+      "name": "accounts",
+      "description": "Konta u\u017cytkownik\u00f3w"
+    },
+    {
+      "name": "blik_codes",
+      "description": "Kody BLIK"
+    },
+    {
+      "name": "payments",
+      "description": "P\u0142atno\u015bci BLIK"
+    },
+    {
+      "name": "transfers",
+      "description": "Przelewy BLIK na telefon"
+    },
+    {
+      "name": "history",
+      "description": "Historia operacji"
+    }
+  ],
+  "openapi": "3.0.3",
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Error code"
+          },
+          "status": {
+            "type": "string",
+            "description": "Error name"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "errors": {
+            "type": "object",
+            "description": "Errors",
+            "additionalProperties": {}
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaginationMetadata": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of items."
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total number of pages."
+          },
+          "first_page": {
+            "type": "integer",
+            "description": "First available page number."
+          },
+          "last_page": {
+            "type": "integer",
+            "description": "Last available page number."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number."
+          },
+          "previous_page": {
+            "type": "integer",
+            "description": "Previous page number."
+          },
+          "next_page": {
+            "type": "integer",
+            "description": "Next page number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "owner_name": {
+            "type": "string",
+            "example": "Jan Kowalski"
+          },
+          "phone_number": {
+            "type": "string",
+            "example": "500100200"
+          },
+          "balance": {
+            "type": "string",
+            "example": "500.00"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ACCOUNT_NOT_FOUND"
+          },
+          "message": {
+            "type": "string",
+            "example": "Nie znaleziono konta"
+          },
+          "errors": {
+            "type": "object",
+            "description": "Field errors, only for VALIDATION_ERROR",
+            "additionalProperties": {}
+          }
+        },
+        "additionalProperties": false
+      },
+      "BlikCode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "482913"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-02T12:02:00+00:00"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreatePayment": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "example": "482913"
+          },
+          "amount": {
+            "type": "number",
+            "example": "25.00"
+          },
+          "merchant_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "example": "\u017babka"
+          }
+        },
+        "required": [
+          "amount",
+          "code",
+          "merchant_name"
+        ],
+        "additionalProperties": false
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "merchant_name": {
+            "type": "string",
+            "example": "\u017babka"
+          },
+          "amount": {
+            "type": "string",
+            "example": "25.00"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "REJECTED"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-02T12:00:00+00:00"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-02T12:02:00+00:00"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateTransfer": {
+        "type": "object",
+        "properties": {
+          "from_account_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "to_phone_number": {
+            "type": "string",
+            "pattern": "^\\d{9}$",
+            "example": "600200300"
+          },
+          "amount": {
+            "type": "number",
+            "example": "120.00"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "example": "Obiad"
+          }
+        },
+        "required": [
+          "amount",
+          "from_account_id",
+          "title",
+          "to_phone_number"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PAYMENT",
+              "TRANSFER_OUT",
+              "TRANSFER_IN"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "example": "-25.00"
+          },
+          "description": {
+            "type": "string",
+            "example": "\u017babka"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-02T12:00:00+00:00"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "DEFAULT_ERROR": {
+        "description": "Default error response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BAD_REQUEST": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
