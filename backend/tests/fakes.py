@@ -1,7 +1,12 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from app.accounts.models import Account
 from app.codes.models import BlikCode, BlikCodeStatus
+from app.payments.models import Payment
+
+if TYPE_CHECKING:
+    from app.history.models import HistoryEntry
 
 
 class FixedClock:
@@ -51,3 +56,30 @@ class InMemoryBlikCodeRepository:
         return any(
             blik_code.code == code and blik_code.is_active_at(now) for blik_code in self.codes
         )
+
+    def find_latest_by_code(self, code: str) -> BlikCode | None:
+        return next(
+            (blik_code for blik_code in reversed(self.codes) if blik_code.code == code), None
+        )
+
+
+class InMemoryPaymentRepository:
+    """Keeps payments in a list and numbers them the way the database would."""
+
+    def __init__(self) -> None:
+        self.payments: list[Payment] = []
+
+    def add(self, payment: Payment) -> None:
+        payment.id = len(self.payments) + 1
+        self.payments.append(payment)
+
+    def find_by_id(self, payment_id: int) -> Payment | None:
+        return next((payment for payment in self.payments if payment.id == payment_id), None)
+
+
+class InMemoryHistoryRepository:
+    def __init__(self) -> None:
+        self.entries: list[HistoryEntry] = []
+
+    def add(self, entry: "HistoryEntry") -> None:
+        self.entries.append(entry)
