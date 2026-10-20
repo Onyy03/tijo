@@ -1,4 +1,5 @@
 import BankApp from './components/BankApp.jsx'
+import MerchantTerminal from './components/MerchantTerminal.jsx'
 import './App.css'
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
       </header>
       <main className="layout__panels">
         <BankApp />
+        <MerchantTerminal />
       </main>
     </div>
   )
