@@ -7,6 +7,8 @@ from marshmallow import Schema, fields
 class ErrorCode(StrEnum):
     ACCOUNT_NOT_FOUND = "ACCOUNT_NOT_FOUND"
     INSUFFICIENT_FUNDS = "INSUFFICIENT_FUNDS"
+    INVALID_AMOUNT = "INVALID_AMOUNT"
+    AMOUNT_LIMIT_EXCEEDED = "AMOUNT_LIMIT_EXCEEDED"
 
 
 class BusinessError(Exception):
