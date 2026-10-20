@@ -3,9 +3,10 @@ from typing import TYPE_CHECKING
 
 from app.accounts.models import Account
 from app.codes.models import BlikCode, BlikCodeStatus
+from app.payments.models import Payment
 
 if TYPE_CHECKING:
-    from app.payments.models import Payment
+    from app.history.models import HistoryEntry
 
 
 class FixedClock:
@@ -68,9 +69,17 @@ class InMemoryPaymentRepository:
     def __init__(self) -> None:
         self.payments: list[Payment] = []
 
-    def add(self, payment: "Payment") -> None:
+    def add(self, payment: Payment) -> None:
         payment.id = len(self.payments) + 1
         self.payments.append(payment)
 
-    def find_by_id(self, payment_id: int) -> "Payment | None":
+    def find_by_id(self, payment_id: int) -> Payment | None:
         return next((payment for payment in self.payments if payment.id == payment_id), None)
+
+
+class InMemoryHistoryRepository:
+    def __init__(self) -> None:
+        self.entries: list[HistoryEntry] = []
+
+    def add(self, entry: "HistoryEntry") -> None:
+        self.entries.append(entry)
