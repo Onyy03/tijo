@@ -376,6 +376,147 @@ curl -X POST http://localhost:5001/api/payments \
 }
 ```
 
+## Przypadki testowe dla testera manualnego
+
+**Warunki wspólne dla wszystkich przypadków:**
+- backend i frontend są uruchomione zgodnie z sekcją [Uruchomienie projektu](#uruchomienie-projektu),
+- w przeglądarce otwarta jest strona http://localhost:5173,
+- baza zawiera tylko konta demonstracyjne. Żeby wrócić do tego stanu przed przypadkiem testowym, zatrzymaj
+  backend, usuń plik `backend/instance/miniblik.db` i uruchom backend ponownie.
+
+| ID | Tytuł | Sprawdzana reguła |
+|---|---|---|
+| [TC001](#tc001) | Generowanie kodu BLIK | R1, R2 |
+| [TC002](#tc002) | Wygaśnięcie kodu po 2 minutach | R2 |
+| [TC003](#tc003) | Nowy kod unieważnia poprzedni | R3 |
+| [TC004](#tc004) | Płatność poprawnym kodem BLIK | R4 |
+| [TC005](#tc005) | Zatwierdzenie płatności | R7, R10 |
+| [TC006](#tc006) | Odrzucenie płatności | R8 |
+| [TC007](#tc007) | Płatność nieistniejącym kodem | R1 |
+| [TC008](#tc008) | Płatność wygasłym kodem | R2 |
+| [TC009](#tc009) | Ponowne użycie wykorzystanego kodu | R4 |
+| [TC010](#tc010) | Zatwierdzenie płatności bez wystarczających środków | R7 |
+| [TC011](#tc011) | Niepoprawna kwota w terminalu | R5 |
+| [TC012](#tc012) | Przelew na numer telefonu | R9, R10 |
+| [TC013](#tc013) | Przelew na własny i nieistniejący numer | R9 |
+
+### TC001
+
+| **ID** | TC001 |
+|---|---|
+| **Tytuł** | Generowanie kodu BLIK |
+| **Warunki początkowe** | Warunki wspólne. W aplikacji bankowej wybrane jest konto „Jan Kowalski (500100200)”. |
+| **Kroki testowe** | 1. W panelu „Aplikacja bankowa” kliknij **Generuj kod BLIK**. |
+| **Oczekiwany rezultat** | Wyświetla się 6-cyfrowy kod (np. „338 456”), pasek pozostałego czasu i napis „Kod ważny jeszcze 2:00”. Licznik maleje co sekundę. Przycisk zmienia nazwę na „Wygeneruj nowy kod”. |
+
+### TC002
+
+| **ID** | TC002 |
+|---|---|
+| **Tytuł** | Wygaśnięcie kodu po 2 minutach |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK**.<br>2. Odczekaj 2 minuty bez wykonywania płatności. |
+| **Oczekiwany rezultat** | Po 2 minutach kod znika, a w jego miejscu pojawia się komunikat „Kod BLIK wygasł. Wygeneruj nowy kod.” |
+
+### TC003
+
+| **ID** | TC003 |
+|---|---|
+| **Tytuł** | Nowy kod unieważnia poprzedni |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod (kod A).<br>2. Kliknij **Wygeneruj nowy kod**.<br>3. W panelu „Terminal sklepu” wpisz nazwę sklepu **Żabka**, kwotę **25,00** i kod A.<br>4. Kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Po kroku 2 aplikacja pokazuje kod inny niż kod A. Po kroku 4 terminal wyświetla „Kod BLIK został już wykorzystany lub anulowany”, a płatność nie powstaje. |
+
+### TC004
+
+| **ID** | TC004 |
+|---|---|
+| **Tytuł** | Płatność poprawnym kodem BLIK |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i zapisany kod.<br>3. Kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Terminal pokazuje „25,00 zł”, „Żabka” i status „Oczekuje na potwierdzenie w aplikacji bankowej…”. W aplikacji bankowej w sekcji „Płatności do potwierdzenia” pojawia się „Żabka 25,00 zł” z przyciskami **Zatwierdź** i **Odrzuć**, a wykorzystany kod znika. |
+
+### TC005
+
+| **ID** | TC005 |
+|---|---|
+| **Tytuł** | Zatwierdzenie płatności |
+| **Warunki początkowe** | Wykonany TC004: płatność „Żabka 25,00 zł” czeka na potwierdzenie, saldo Jana Kowalskiego wynosi 500,00 zł. |
+| **Kroki testowe** | 1. W aplikacji bankowej przy płatności „Żabka 25,00 zł” kliknij **Zatwierdź**. |
+| **Oczekiwany rezultat** | Saldo zmienia się na 475,00 zł, a płatność znika z listy do potwierdzenia. W historii operacji pojawia się wpis „Płatność BLIK, Żabka, -25,00 zł”. Terminal w ciągu 2 sekund pokazuje „Płatność zatwierdzona”. |
+
+### TC006
+
+| **ID** | TC006 |
+|---|---|
+| **Tytuł** | Odrzucenie płatności |
+| **Warunki początkowe** | Wykonany TC004: płatność „Żabka 25,00 zł” czeka na potwierdzenie, saldo wynosi 500,00 zł. |
+| **Kroki testowe** | 1. W aplikacji bankowej przy płatności „Żabka 25,00 zł” kliknij **Odrzuć**. |
+| **Oczekiwany rezultat** | Saldo nadal wynosi 500,00 zł, a w historii operacji nie ma nowych wpisów. Terminal w ciągu 2 sekund pokazuje „Płatność odrzucona”. |
+
+### TC007
+
+| **ID** | TC007 |
+|---|---|
+| **Tytuł** | Płatność nieistniejącym kodem |
+| **Warunki początkowe** | Warunki wspólne. Nie wygenerowano żadnego kodu BLIK. |
+| **Kroki testowe** | 1. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i kod **999999**.<br>2. Kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Pod formularzem terminala pojawia się komunikat „Nieprawidłowy kod BLIK”. Formularz zostaje na ekranie i płatność nie powstaje. |
+
+### TC008
+
+| **ID** | TC008 |
+|---|---|
+| **Tytuł** | Płatność wygasłym kodem |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. Odczekaj ponad 2 minuty.<br>3. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i zapisany kod.<br>4. Kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Terminal wyświetla komunikat „Kod BLIK wygasł”, a płatność nie powstaje. |
+
+### TC009
+
+| **ID** | TC009 |
+|---|---|
+| **Tytuł** | Ponowne użycie wykorzystanego kodu |
+| **Warunki początkowe** | Wykonany TC005: płatność kodem została zatwierdzona, a terminal pokazuje „Płatność zatwierdzona”. |
+| **Kroki testowe** | 1. W terminalu kliknij **Nowa płatność**.<br>2. Wpisz kwotę **10,00** i ten sam kod, którym zapłacono w TC004.<br>3. Kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Terminal wyświetla komunikat „Kod BLIK został już wykorzystany lub anulowany”, a druga płatność nie powstaje. |
+
+### TC010
+
+| **ID** | TC010 |
+|---|---|
+| **Tytuł** | Zatwierdzenie płatności bez wystarczających środków |
+| **Warunki początkowe** | Warunki wspólne. W aplikacji bankowej wybrane jest konto „Piotr Zieliński (700300400)” z saldem 0,00 zł. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **5,00** i zapisany kod, a następnie kliknij **Zapłać**.<br>3. W aplikacji bankowej kliknij **Zatwierdź** przy płatności „Żabka 5,00 zł”. |
+| **Oczekiwany rezultat** | Pod listą płatności pojawia się komunikat „Niewystarczające środki na koncie”. Saldo nadal wynosi 0,00 zł, płatność zostaje na liście do potwierdzenia (można ją odrzucić), a terminal dalej pokazuje „Oczekuje na potwierdzenie w aplikacji bankowej…”. |
+
+### TC011
+
+| **ID** | TC011 |
+|---|---|
+| **Tytuł** | Niepoprawna kwota w terminalu |
+| **Warunki początkowe** | Warunki wspólne. Dla konta „Jan Kowalski” wygenerowano kod BLIK i zapisano go. |
+| **Kroki testowe** | 1. W terminalu wpisz nazwę sklepu **Żabka** i zapisany kod.<br>2. Wpisz kwotę **0** i kliknij **Zapłać**.<br>3. Wpisz kwotę **-5** i kliknij **Zapłać**.<br>4. Wpisz kwotę **5000,01** i kliknij **Zapłać**.<br>5. Wpisz kwotę **abc** i kliknij **Zapłać**.<br>6. Wpisz kwotę **25,00** i kliknij **Zapłać**. |
+| **Oczekiwany rezultat** | Kroki 2 i 3: „Kwota musi być większa od zera”.<br>Krok 4: „Kwota przekracza limit 5000.00 PLN”.<br>Krok 5: „Kwota musi być liczbą”.<br>Po krokach 2–5 płatność nie powstaje, a kod pozostaje ważny. Krok 6: terminal pokazuje „Oczekuje na potwierdzenie w aplikacji bankowej…”. |
+
+### TC012
+
+| **ID** | TC012 |
+|---|---|
+| **Tytuł** | Przelew na numer telefonu |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). Anna Nowak ma saldo 1 500,00 zł. |
+| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **600200300**, kwotę **120,50** i tytuł **Obiad**.<br>2. Kliknij **Wyślij przelew**.<br>3. Zmień konto na „Anna Nowak (600200300)”. |
+| **Oczekiwany rezultat** | Pojawia się komunikat „Przelew został wysłany”. Saldo Jana Kowalskiego wynosi 379,50 zł, a w jego historii jest wpis „Przelew wychodzący, Obiad (do: Anna Nowak), -120,50 zł”. Po zmianie konta saldo Anny Nowak wynosi 1620,50 zł, a w jej historii jest wpis „Przelew przychodzący, Obiad (od: Jan Kowalski), 120,50 zł”. |
+
+### TC013
+
+| **ID** | TC013 |
+|---|---|
+| **Tytuł** | Przelew na własny i nieistniejący numer |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). |
+| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **500100200**, kwotę **10,00** i tytuł **Test**, a następnie kliknij **Wyślij przelew**.<br>2. Zmień numer na **999888777** i kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Krok 1: „Nie można wysłać przelewu na własny numer telefonu”.<br>Krok 2: „Nie znaleziono odbiorcy o tym numerze telefonu”.<br>Saldo nadal wynosi 500,00 zł, a w historii operacji nie ma nowych wpisów. |
+
 ## Technologie użyte w projekcie
 
 - Backend: Python, Flask, Flask-SQLAlchemy (SQLite), flask-smorest (OpenAPI / Swagger UI)
