@@ -519,6 +519,70 @@ curl -X POST http://localhost:5001/api/payments \
 
 ## Technologie użyte w projekcie
 
-- Backend: Python, Flask, Flask-SQLAlchemy (SQLite), flask-smorest (OpenAPI / Swagger UI)
-- Frontend: React, Vite
-- Testy i jakość: pytest, ruff, oxlint
+| Obszar | Technologia | Wersja |
+|---|---|---|
+| Język backendu | Python | 3.14 (wymagane minimum 3.12) |
+| Framework webowy | Flask | 3.1.3 |
+| Baza danych i ORM | SQLite, Flask-SQLAlchemy, SQLAlchemy | 3.1.1, 2.1.5 |
+| REST API i dokumentacja | flask-smorest (OpenAPI 3, Swagger UI), marshmallow | 0.47.0, 4.3.1 |
+| Frontend | React, Vite | 19.3.1, 8.3.4 |
+| Testy | pytest, pytest-cov | 9.1.1, 7.1.0 |
+| Analiza statyczna | ruff (backend), oxlint (frontend) | 0.17.1, 1.89.0 |
+| CI | GitHub Actions | – |
+
+### Struktura projektu
+
+```
+.
+├── backend/
+│   ├── app/
+│   │   ├── accounts/      konta: model, repozytorium, serwis, endpointy, schematy
+│   │   ├── amounts/       reguły walidacji kwot
+│   │   ├── codes/         kody BLIK i ich generator
+│   │   ├── payments/      płatności BLIK
+│   │   ├── transfers/     przelewy na numer telefonu
+│   │   ├── history/       historia operacji
+│   │   ├── __init__.py    fabryka aplikacji create_app()
+│   │   ├── container.py   składanie serwisów i ich zależności
+│   │   ├── errors.py      kody błędów i wspólny format odpowiedzi błędu
+│   │   └── …              clock.py, config.py, fields.py, money.py, seed.py
+│   ├── tests/
+│   │   ├── unit/          testy jednostkowe
+│   │   ├── integration/   testy integracyjne API
+│   │   └── fakes.py       repozytoria w pamięci, zegary, generator kodów dla testów
+│   ├── pyproject.toml     konfiguracja ruff, pytest i pomiaru pokrycia
+│   └── requirements*.txt
+├── frontend/
+│   └── src/
+│       ├── components/    BankApp, BlikCodeCard, PendingPayments, TransferForm, History, MerchantTerminal
+│       ├── api.js         klient REST API
+│       ├── format.js      formatowanie kwot, dat i kodów
+│       └── hooks/         usePolling (odświeżanie statusu co 2 s)
+├── docs/                  zrzuty ekranu i specyfikacja OpenAPI
+└── .github/workflows/     GitHub Actions
+```
+
+Każdy moduł backendu ma ten sam podział warstw: `routes.py` (HTTP) → `service.py` (reguły biznesowe) →
+`repository.py` (baza danych). Część reguł należy do modeli, np. `Account.withdraw()`,
+`BlikCode.use()` i `Payment.confirm()`.
+
+### Jakość kodu
+
+| Element | Wzorzec lub zasada | Po co |
+|---|---|---|
+| `CodeGenerator` → `SecureRandomCodeGenerator` | Strategy, odwrócenie zależności (D z SOLID) | testy podstawiają generator ze znanymi kodami |
+| `AmountValidator` z listą reguł `PositiveAmountRule`, `AmountScaleRule`, `AmountLimitRule` | łańcuch reguł, zasada otwarte-zamknięte (O z SOLID) | nowa reguła kwoty to nowa klasa, bez zmian w istniejącym kodzie |
+| `*Repository` | Repository | serwisy nie zależą od bazy, a testy jednostkowe używają repozytoriów w pamięci |
+| `create_app()` | Application Factory | każdy test integracyjny dostaje własną aplikację i bazę |
+| wstrzykiwany `Clock` | wstrzykiwanie zależności | testy upływu czasu bez czekania |
+| schematy marshmallow | DTO | API nie wystawia modeli bazy danych |
+| `container.py` | composition root | zależności składane w jednym miejscu |
+| `errors.py` | pojedyncza odpowiedzialność (S z SOLID) | jeden format błędów i mapowanie na kody HTTP |
+
+Zasady obowiązujące w kodzie:
+- nazwy klas, funkcji i zmiennych są po angielsku, a teksty w interfejsie po polsku,
+- ruff pilnuje braku nieużywanych importów (F401) i nazewnictwa zgodnego z PEP 8 (N), a oxlint
+  nieużywanych zmiennych i importów we frontendzie,
+- kwoty są przechowywane w groszach jako liczby całkowite, bez typu `float`,
+- commity są w formacie Conventional Commits. Praca toczy się na gałęziach `feature/*`, łączonych
+  do `develop`. Każdy etap trafia na `main` z tagiem `etap-1`, `etap-2`, `etap-3`.
