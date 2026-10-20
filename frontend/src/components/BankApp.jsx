@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { formatMoney } from '../format.js'
 import BlikCodeCard from './BlikCodeCard.jsx'
+import History from './History.jsx'
 import PendingPayments from './PendingPayments.jsx'
+import TransferForm from './TransferForm.jsx'
 
 function BankApp() {
   const [accounts, setAccounts] = useState([])
@@ -83,6 +85,8 @@ function BankApp() {
             onPaymentDecided={refreshBalance}
           />
           <BlikCodeCard key={`${accountId}-${codeRound}`} accountId={accountId} />
+          <TransferForm key={accountId} accountId={accountId} onTransferSent={refreshBalance} />
+          <History accountId={accountId} version={balanceVersion} />
         </>
       )}
 
