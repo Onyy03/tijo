@@ -26,7 +26,7 @@ class NotFoundError(BusinessError):
     http_status = 404
 
 
-class ErrorSchema(Schema):
+class ApiErrorSchema(Schema):
     code = fields.Str(metadata={"example": ErrorCode.ACCOUNT_NOT_FOUND.value})
     message = fields.Str(metadata={"example": "Nie znaleziono konta"})
 
