@@ -11,5 +11,10 @@ line-length = 100
 # N: PEP 8 naming, B: common bugs, UP: modern syntax
 select = ["E", "W", "F", "I", "N", "B", "UP"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--import-mode=importlib"
