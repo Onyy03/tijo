@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from app.accounts.models import Account
 from app.accounts.service import AccountService
 from app.codes.models import BlikCode, BlikCodeStatus
-from app.codes.service import BlikCodeService
+from app.codes.service import MAX_GENERATION_ATTEMPTS, BlikCodeService
 from tests.fakes import (
     FixedClock,
     InMemoryAccountRepository,
@@ -62,3 +64,17 @@ def test_should_draw_again_when_generated_code_is_already_in_use():
     # then
     assert blik_code.code == "222222"
     assert taken.status == BlikCodeStatus.ACTIVE
+
+
+def test_should_give_up_when_every_drawn_code_is_already_in_use():
+    # given
+    taken = BlikCode.issue(account_id=OTHER_ACCOUNT_ID, code="111111", now=NOW)
+    codes = InMemoryBlikCodeRepository(taken)
+    service = create_service(codes, *["111111"] * MAX_GENERATION_ATTEMPTS)
+
+    # when
+    with pytest.raises(RuntimeError):
+        service.generate_code(ACCOUNT_ID)
+
+    # then
+    assert codes.codes == [taken]
