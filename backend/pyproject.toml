@@ -1,0 +1,15 @@
+[project]
+name = "miniblik-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes (F401 = unused imports), I: import order,
+# N: PEP 8 naming, B: common bugs, UP: modern syntax
+select = ["E", "W", "F", "I", "N", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
