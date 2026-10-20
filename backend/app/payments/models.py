@@ -5,7 +5,9 @@ from typing import Self
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.accounts.models import Account
 from app.codes.models import BlikCode
+from app.errors import BusinessError, ErrorCode
 from app.extensions import db
 
 PAYMENT_LIFETIME = timedelta(seconds=120)
@@ -13,6 +15,8 @@ PAYMENT_LIFETIME = timedelta(seconds=120)
 
 class PaymentStatus(StrEnum):
     PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
 
 
 class Payment(db.Model):
@@ -40,3 +44,18 @@ class Payment(db.Model):
             created_at=now,
             expires_at=now + PAYMENT_LIFETIME,
         )
+
+    def confirm(self, account: Account, now: datetime) -> None:
+        self._ensure_pending()
+        if now >= self.expires_at:
+            raise BusinessError(ErrorCode.PAYMENT_EXPIRED, "Czas na potwierdzenie płatności minął")
+        account.withdraw(self.amount_cents)
+        self.status = PaymentStatus.CONFIRMED
+
+    def reject(self) -> None:
+        self._ensure_pending()
+        self.status = PaymentStatus.REJECTED
+
+    def _ensure_pending(self) -> None:
+        if self.status != PaymentStatus.PENDING:
+            raise BusinessError(ErrorCode.PAYMENT_NOT_PENDING, "Płatność została już rozliczona")
