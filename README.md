@@ -57,6 +57,20 @@ Przy pierwszym uruchomieniu tworzą się konta demonstracyjne:
 | Anna Nowak | 600200300 | 1 500,00 PLN |
 | Piotr Zieliński | 700300400 | 0,00 PLN |
 
+### Zrzuty ekranu
+
+Wygenerowany kod BLIK i terminal sklepu przed płatnością:
+
+![Kod BLIK i terminal sklepu](docs/img/blik-code.png)
+
+Płatność czeka na potwierdzenie w aplikacji bankowej:
+
+![Płatność do potwierdzenia](docs/img/pending-payment.png)
+
+Po zatwierdzeniu płatności i wysłaniu przelewu na telefon (saldo i historia operacji):
+
+![Historia operacji](docs/img/history.png)
+
 ## Uruchomienie projektu
 
 Wymagania: Python 3.12+ i Node.js 22+.
