@@ -4,16 +4,30 @@ from app.codes.generator import CODE_LENGTH
 from app.fields import Money, UtcDateTime
 from app.payments.models import PaymentStatus
 
+AMOUNT_ERRORS = {
+    "required": "Podaj kwotę",
+    "invalid": "Kwota musi być liczbą",
+    "special": "Kwota musi być liczbą",
+}
+
 
 class CreatePaymentSchema(Schema):
     code = fields.Str(
         required=True,
         validate=validate.Regexp(rf"^\d{{{CODE_LENGTH}}}$", error="Kod BLIK musi mieć 6 cyfr"),
+        error_messages={"required": "Podaj kod BLIK"},
         metadata={"example": "482913"},
     )
-    amount = fields.Decimal(required=True, metadata={"example": "25.00"})
+    amount = fields.Decimal(
+        required=True, error_messages=AMOUNT_ERRORS, metadata={"example": "25.00"}
+    )
     merchant_name = fields.Str(
-        required=True, validate=validate.Length(min=1, max=50), metadata={"example": "Żabka"}
+        required=True,
+        validate=validate.Length(
+            min=1, max=50, error="Nazwa sklepu musi mieć od {min} do {max} znaków"
+        ),
+        error_messages={"required": "Podaj nazwę sklepu"},
+        metadata={"example": "Żabka"},
     )
 
 
