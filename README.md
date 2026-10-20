@@ -246,6 +246,136 @@ cd backend && ruff check . && ruff format --check .   # m.in. nieużywane import
 cd frontend && npm run lint                           # oxlint, m.in. nieużywane zmienne i importy
 ```
 
+## Dokumentacja API
+
+Dokumentację API w standardzie **OpenAPI 3** generuje biblioteka flask-smorest prosto z kodu: z tras,
+schematów marshmallow i docstringów. Dzięki temu dokumentacja nie rozjeżdża się z implementacją.
+
+| Co | Gdzie |
+|---|---|
+| Swagger UI (można z niego wysyłać zapytania) | http://localhost:5001/api/docs (po uruchomieniu backendu) |
+| Specyfikacja OpenAPI (JSON) | http://localhost:5001/api/openapi.json |
+| Kopia specyfikacji w repozytorium | [`docs/openapi.json`](docs/openapi.json) |
+
+Kopię specyfikacji odświeża polecenie `cd backend && flask --app app openapi write ../docs/openapi.json`.
+
+![Swagger UI](docs/img/swagger.png)
+
+### Endpointy
+
+| Metoda | Ścieżka | Kto używa | Opis | Odpowiedzi |
+|---|---|---|---|---|
+| GET | `/api/accounts` | aplikacja bankowa | lista kont | 200 |
+| GET | `/api/accounts/{account_id}` | aplikacja bankowa | dane i saldo konta | 200, 404 |
+| POST | `/api/accounts/{account_id}/blik-codes` | aplikacja bankowa | wygenerowanie kodu BLIK (poprzedni aktywny kod zostaje anulowany) | 201, 404 |
+| GET | `/api/accounts/{account_id}/pending-payments` | aplikacja bankowa | płatności czekające na potwierdzenie | 200, 404 |
+| GET | `/api/accounts/{account_id}/history` | aplikacja bankowa | historia operacji, od najnowszej | 200, 404 |
+| POST | `/api/payments` | terminal sklepu | rozpoczęcie płatności kodem BLIK | 201, 400, 404, 422 |
+| GET | `/api/payments/{payment_id}` | terminal sklepu | status płatności | 200, 404 |
+| POST | `/api/payments/{payment_id}/confirm` | aplikacja bankowa | zatwierdzenie płatności | 200, 404, 422 |
+| POST | `/api/payments/{payment_id}/reject` | aplikacja bankowa | odrzucenie płatności | 200, 404, 422 |
+| POST | `/api/transfers` | aplikacja bankowa | przelew na numer telefonu | 201, 400, 404, 422 |
+
+Kwoty są przesyłane jako tekst z dwoma miejscami po przecinku (`"25.00"`), a daty w formacie ISO 8601
+w UTC.
+
+### Błędy
+
+Każdy błąd ma ten sam format. Błędy walidacji (400) mają dodatkowo pole `errors` z komunikatami dla
+poszczególnych pól.
+
+```json
+{
+  "code": "PAYMENT_NOT_PENDING",
+  "message": "Płatność została już rozliczona"
+}
+```
+
+| HTTP | `code` | Kiedy |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | niepoprawne dane wejściowe, np. kod nie ma 6 cyfr albo kwota nie jest liczbą |
+| 404 | `ACCOUNT_NOT_FOUND`, `CODE_NOT_FOUND`, `PAYMENT_NOT_FOUND`, `RECIPIENT_NOT_FOUND` | brak konta, kodu, płatności albo odbiorcy o podanym numerze |
+| 422 | `CODE_EXPIRED`, `CODE_NOT_ACTIVE` | kod wygasł albo został już użyty lub anulowany |
+| 422 | `INVALID_AMOUNT`, `AMOUNT_LIMIT_EXCEEDED` | kwota nie jest dodatnia, ma więcej niż 2 miejsca po przecinku albo przekracza 5 000,00 PLN |
+| 422 | `INSUFFICIENT_FUNDS` | za mało środków na koncie |
+| 422 | `PAYMENT_EXPIRED`, `PAYMENT_NOT_PENDING` | minął czas na potwierdzenie albo płatność jest już rozliczona |
+| 422 | `SELF_TRANSFER` | przelew na własny numer telefonu |
+
+### Przykłady
+
+Pełny przebieg płatności i przelewu na świeżej bazie. Odpowiedzi są sformatowane dla czytelności.
+
+```bash
+# 1. Aplikacja bankowa generuje kod dla konta Jana Kowalskiego
+curl -X POST http://localhost:5001/api/accounts/1/blik-codes
+```
+```json
+{ "code": "411609", "expires_at": "2026-10-20T22:23:37.273595+00:00" }
+```
+
+```bash
+# 2. Terminal sklepu rozpoczyna płatność tym kodem
+curl -X POST http://localhost:5001/api/payments \
+  -H 'Content-Type: application/json' \
+  -d '{"code": "411609", "amount": "25.00", "merchant_name": "Żabka"}'
+```
+```json
+{
+  "id": 1,
+  "merchant_name": "Żabka",
+  "amount": "25.00",
+  "status": "PENDING",
+  "created_at": "2026-10-20T22:21:37.304090+00:00",
+  "expires_at": "2026-10-20T22:23:37.304090+00:00"
+}
+```
+
+```bash
+# 3. Aplikacja bankowa zatwierdza płatność (status zmienia się na CONFIRMED)
+curl -X POST http://localhost:5001/api/payments/1/confirm
+
+# 4. Ponowne zatwierdzenie tej samej płatności: HTTP 422
+curl -X POST http://localhost:5001/api/payments/1/confirm
+```
+```json
+{ "code": "PAYMENT_NOT_PENDING", "message": "Płatność została już rozliczona" }
+```
+
+```bash
+# 5. Przelew na telefon Anny Nowak
+curl -X POST http://localhost:5001/api/transfers \
+  -H 'Content-Type: application/json' \
+  -d '{"from_account_id": 1, "to_phone_number": "600200300", "amount": "120.50", "title": "Obiad"}'
+
+# 6. Historia operacji Jana Kowalskiego
+curl http://localhost:5001/api/accounts/1/history
+```
+```json
+[
+  { "id": 2, "type": "TRANSFER_OUT", "amount": "-120.50", "description": "Obiad (do: Anna Nowak)", "created_at": "2026-10-20T22:21:37.341939+00:00" },
+  { "id": 1, "type": "PAYMENT", "amount": "-25.00", "description": "Żabka", "created_at": "2026-10-20T22:21:37.329755+00:00" }
+]
+```
+
+```bash
+# 7. Niepoprawne dane: HTTP 400
+curl -X POST http://localhost:5001/api/payments \
+  -H 'Content-Type: application/json' \
+  -d '{"code": "12ab56", "amount": "abc", "merchant_name": "Żabka"}'
+```
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Niepoprawne dane wejściowe",
+  "errors": {
+    "json": {
+      "amount": ["Kwota musi być liczbą"],
+      "code": ["Kod BLIK musi mieć 6 cyfr"]
+    }
+  }
+}
+```
+
 ## Technologie użyte w projekcie
 
 - Backend: Python, Flask, Flask-SQLAlchemy (SQLite), flask-smorest (OpenAPI / Swagger UI)
