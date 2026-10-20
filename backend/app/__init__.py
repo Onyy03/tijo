@@ -13,6 +13,7 @@ from app.errors import register_error_handlers
 from app.extensions import db
 from app.payments.routes import payments_blueprint
 from app.seed import seed_demo_accounts
+from app.transfers.routes import transfers_blueprint
 
 
 def create_app(
@@ -29,6 +30,7 @@ def create_app(
     api.register_blueprint(accounts_blueprint)
     api.register_blueprint(codes_blueprint)
     api.register_blueprint(payments_blueprint)
+    api.register_blueprint(transfers_blueprint)
     register_error_handlers(app)
     init_services(app, clock or SystemClock(), code_generator or SecureRandomCodeGenerator())
 

@@ -12,6 +12,7 @@ from app.codes.service import BlikCodeService
 from app.history.repository import HistoryRepository
 from app.payments.repository import PaymentRepository
 from app.payments.service import PaymentService
+from app.transfers.service import TransferService
 
 EXTENSION_KEY = "miniblik"
 
@@ -21,21 +22,27 @@ class Services:
     accounts: AccountService
     codes: BlikCodeService
     payments: PaymentService
+    transfers: TransferService
 
 
 def init_services(app: Flask, clock: Clock, code_generator: CodeGenerator) -> None:
     accounts = AccountService(AccountRepository())
     code_repository = BlikCodeRepository()
-    codes = BlikCodeService(accounts, code_repository, code_generator, clock)
-    payments = PaymentService(
-        accounts,
-        code_repository,
-        PaymentRepository(),
-        HistoryRepository(),
-        create_amount_validator(),
-        clock,
+    history_repository = HistoryRepository()
+    amount_validator = create_amount_validator()
+    app.extensions[EXTENSION_KEY] = Services(
+        accounts=accounts,
+        codes=BlikCodeService(accounts, code_repository, code_generator, clock),
+        payments=PaymentService(
+            accounts,
+            code_repository,
+            PaymentRepository(),
+            history_repository,
+            amount_validator,
+            clock,
+        ),
+        transfers=TransferService(accounts, history_repository, amount_validator, clock),
     )
-    app.extensions[EXTENSION_KEY] = Services(accounts=accounts, codes=codes, payments=payments)
 
 
 def get_services() -> Services:
