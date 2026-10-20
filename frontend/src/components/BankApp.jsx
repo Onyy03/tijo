@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { formatMoney } from '../format.js'
+import BlikCodeCard from './BlikCodeCard.jsx'
 
 function BankApp() {
   const [accounts, setAccounts] = useState([])
@@ -65,6 +66,8 @@ function BankApp() {
           </strong>
         </div>
       )}
+
+      {accountId !== null && <BlikCodeCard key={accountId} accountId={accountId} />}
 
       {error && (
         <p className="message message--error" role="alert">
