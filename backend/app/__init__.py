@@ -8,6 +8,7 @@ from app.config import Config
 from app.container import init_services
 from app.errors import register_error_handlers
 from app.extensions import db
+from app.seed import seed_demo_accounts
 
 
 def create_app(config: type[Config] = Config) -> Flask:
@@ -23,5 +24,6 @@ def create_app(config: type[Config] = Config) -> Flask:
 
     with app.app_context():
         db.create_all()
+        seed_demo_accounts()
 
     return app
