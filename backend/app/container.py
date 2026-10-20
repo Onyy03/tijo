@@ -10,6 +10,7 @@ from app.codes.generator import CodeGenerator
 from app.codes.repository import BlikCodeRepository
 from app.codes.service import BlikCodeService
 from app.history.repository import HistoryRepository
+from app.history.service import HistoryService
 from app.payments.repository import PaymentRepository
 from app.payments.service import PaymentService
 from app.transfers.service import TransferService
@@ -23,6 +24,7 @@ class Services:
     codes: BlikCodeService
     payments: PaymentService
     transfers: TransferService
+    history: HistoryService
 
 
 def init_services(app: Flask, clock: Clock, code_generator: CodeGenerator) -> None:
@@ -42,6 +44,7 @@ def init_services(app: Flask, clock: Clock, code_generator: CodeGenerator) -> No
             clock,
         ),
         transfers=TransferService(accounts, history_repository, amount_validator, clock),
+        history=HistoryService(accounts, history_repository),
     )
 
 
