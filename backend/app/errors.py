@@ -2,9 +2,11 @@ from enum import StrEnum
 
 from flask import Flask, Response, jsonify
 from marshmallow import Schema, fields
+from werkzeug.exceptions import BadRequest
 
 
 class ErrorCode(StrEnum):
+    VALIDATION_ERROR = "VALIDATION_ERROR"
     ACCOUNT_NOT_FOUND = "ACCOUNT_NOT_FOUND"
     INSUFFICIENT_FUNDS = "INSUFFICIENT_FUNDS"
     INVALID_AMOUNT = "INVALID_AMOUNT"
@@ -37,11 +39,24 @@ class NotFoundError(BusinessError):
 class ApiErrorSchema(Schema):
     code = fields.Str(metadata={"example": ErrorCode.ACCOUNT_NOT_FOUND.value})
     message = fields.Str(metadata={"example": "Nie znaleziono konta"})
+    errors = fields.Dict(metadata={"description": "Field errors, only for VALIDATION_ERROR"})
 
 
 def handle_business_error(error: BusinessError) -> tuple[Response, int]:
     return jsonify(code=error.code, message=error.message), error.http_status
 
 
+def handle_validation_error(error: BadRequest) -> tuple[Response, int]:
+    """Request data rejected by a schema; webargs puts the field errors in `error.data`."""
+    field_errors = getattr(error, "data", {}).get("messages", {})
+    body = jsonify(
+        code=ErrorCode.VALIDATION_ERROR,
+        message="Niepoprawne dane wejściowe",
+        errors=field_errors,
+    )
+    return body, 400
+
+
 def register_error_handlers(app: Flask) -> None:
     app.register_error_handler(BusinessError, handle_business_error)
+    app.register_error_handler(BadRequest, handle_validation_error)
