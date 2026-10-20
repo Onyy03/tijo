@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields
 
-from app.money import Money
+from app.fields import Money
 
 
 class AccountSchema(Schema):

@@ -1,15 +1,6 @@
-from datetime import UTC
-
 from marshmallow import Schema, fields
 
-
-class UtcDateTime(fields.DateTime):
-    """Serializes naive UTC datetimes from the database with an explicit UTC offset."""
-
-    def _serialize(self, value, attr, obj, **kwargs):
-        if value is None:
-            return None
-        return super()._serialize(value.replace(tzinfo=UTC), attr, obj, **kwargs)
+from app.fields import UtcDateTime
 
 
 class BlikCodeSchema(Schema):
