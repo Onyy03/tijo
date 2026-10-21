@@ -57,3 +57,15 @@ def test_should_show_transfer_in_history_of_both_accounts(client):
     assert [(entry["type"], entry["amount"]) for entry in recipient_history] == [
         ("TRANSFER_IN", "50.00")
     ]
+
+
+def test_should_accept_recipient_phone_written_with_spaces_and_country_prefix(client):
+    # given
+    phone_with_prefix = "+48 600 200 300"
+
+    # when
+    response = send_transfer(client, to_phone_number=phone_with_prefix)
+
+    # then
+    assert response.status_code == 201
+    assert get_balance(client, ANNA_ID) == "1620.00"
