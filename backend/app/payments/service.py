@@ -68,6 +68,11 @@ class PaymentService:
         payment.reject()
         return payment
 
+    def cancel(self, payment_id: int) -> Payment:
+        payment = self.get_payment(payment_id)
+        payment.cancel()
+        return payment
+
     def _record_in_history(self, payment: Payment, now: datetime) -> None:
         self._history.add(
             HistoryEntry(

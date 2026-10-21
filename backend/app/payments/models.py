@@ -17,6 +17,7 @@ class PaymentStatus(StrEnum):
     PENDING = "PENDING"
     CONFIRMED = "CONFIRMED"
     REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
 
 
 class Payment(db.Model):
@@ -55,6 +56,10 @@ class Payment(db.Model):
     def reject(self) -> None:
         self._ensure_pending()
         self.status = PaymentStatus.REJECTED
+
+    def cancel(self) -> None:
+        self._ensure_pending()
+        self.status = PaymentStatus.CANCELLED
 
     def _ensure_pending(self) -> None:
         if self.status != PaymentStatus.PENDING:
