@@ -1,24 +1,64 @@
-:root {
-  --color-background: #eef1f5;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f6f8fa;
-  --color-border: #d8dee4;
-  --color-text: #1f2328;
-  --color-text-muted: #59636e;
-  --color-primary: #0b5cad;
-  --color-primary-hover: #094a8c;
-  --color-success: #1a7f37;
-  --color-danger: #cf222e;
-  --color-code-background: #16191d;
-  --color-code-text: #ffffff;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgb(31 35 40 / 12%), 0 8px 24px rgb(31 35 40 / 8%);
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/bitter/500.css';
+@import '@fontsource/bitter/700.css';
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+:root {
+  /* bank */
+  --ink: #17201c;
+  --ink-muted: #5d655e;
+  --paper: #f3f0e8;
+  --surface: #fffdf8;
+  --line: #ddd7ca;
+  --line-strong: #c4bba8;
+  --forest: #123d30;
+  --forest-light: #1d5543;
+  --forest-ink: #dfe9e3;
+  --brass: #b0843a;
+  --positive: #1f7a4a;
+  --negative: #b4372b;
+  --focus: #2f6fd6;
+
+  /* shop */
+  --shop-paper: #fbf7ef;
+  --shop-ink: #2b2420;
+  --shop-muted: #74675b;
+  --shop-line: #e6dccb;
+  --shop-wheat: #e3b448;
+  --shop-wheat-dark: #9c6f12;
+  --shop-crust: #6e4426;
+
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-serif: 'Bitter', Georgia, serif;
+  --radius-small: 6px;
+  --radius: 10px;
+
+  /* aliases used by the old two-panel view, removed together with it */
+  --color-background: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-muted: #f7f4ec;
+  --color-border: var(--line);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-muted);
+  --color-primary: var(--forest);
+  --color-primary-hover: var(--forest-light);
+  --color-success: var(--positive);
+  --color-danger: var(--negative);
+  --color-code-background: var(--forest);
+  --color-code-text: #ffffff;
+  --shadow: 0 1px 2px rgb(23 32 28 / 8%);
+
+  font-family: var(--font-sans);
   line-height: 1.5;
-  color: var(--color-text);
-  background: var(--color-background);
+  color: var(--ink);
+  background: var(--paper);
   color-scheme: light;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -27,6 +67,7 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
 }
 
 h1,
@@ -34,4 +75,105 @@ h2,
 h3 {
   margin: 0;
   line-height: 1.2;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* amounts, codes and phone numbers line up digit under digit */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn--primary {
+  color: #ffffff;
+  background: var(--forest);
+  border-color: var(--forest);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--forest-light);
+  border-color: var(--forest-light);
+}
+
+.btn--danger {
+  color: var(--negative);
+  border-color: rgb(180 55 43 / 45%);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.input {
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+}
+
+.input:focus {
+  border-color: var(--forest);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(18 61 48 / 15%);
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  border-left: 3px solid currentcolor;
+  border-radius: 0 var(--radius-small) var(--radius-small) 0;
+}
+
+.notice--error {
+  color: var(--negative);
+  background: rgb(180 55 43 / 7%);
+}
+
+.notice--success {
+  color: var(--positive);
+  background: rgb(31 122 74 / 8%);
 }
