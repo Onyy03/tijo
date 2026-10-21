@@ -19,18 +19,19 @@ MiniBlik – symulator płatności kodem BLIK
 
 MiniBlik odtwarza w uproszczeniu płatność kodem BLIK. Użytkownik generuje w aplikacji bankowej
 6-cyfrowy kod, sprzedawca wpisuje go w terminalu razem z kwotą, a użytkownik zatwierdza albo odrzuca
-płatność w aplikacji. Oprócz tego można wysłać przelew na numer telefonu i przejrzeć historię operacji.
+płatność w aplikacji. Oprócz tego można wysłać przelew na numer telefonu, przejrzeć historię operacji
+i podsumowanie wpływów oraz wydatków.
 
 Aplikacja ma dwa panele, które działają obok siebie w przeglądarce:
 
 - **Aplikacja bankowa**:
-  - wybór konta i saldo,
+  - wybór konta, saldo i podsumowanie wpływów oraz wydatków,
   - generowanie kodu BLIK z odliczaniem ważności,
   - zatwierdzanie i odrzucanie płatności,
-  - przelew na numer telefonu,
+  - przelew na numer telefonu (także zapisany ze spacjami lub z prefiksem +48),
   - historia operacji.
-- **Terminal sklepu**: płatność kodem BLIK i podgląd jej statusu (oczekuje, zatwierdzona, odrzucona,
-  czas minął).
+- **Terminal sklepu**: płatność kodem BLIK, podgląd jej statusu (oczekuje, zatwierdzona, odrzucona,
+  anulowana, czas minął) i anulowanie oczekującej płatności.
 
 ### Reguły biznesowe
 
@@ -46,6 +47,10 @@ Aplikacja ma dwa panele, które działają obok siebie w przeglądarce:
 | R8 | Zatwierdzić lub odrzucić można tylko płatność, która czeka na decyzję. |
 | R9 | Przelew wymaga istniejącego odbiorcy i wystarczających środków. Nie można wysłać przelewu na własny numer. Kwota według R5. |
 | R10 | Każda zmiana salda dodaje wpis do historii operacji. |
+| R11 | Numer telefonu odbiorcy można podać ze spacjami, myślnikami i prefiksem +48 lub 0048. Po usunięciu tych znaków musi zostać 9 cyfr. |
+| R12 | Wydatki z konta (zatwierdzone płatności i przelewy wychodzące) w jednym dniu (UTC) nie mogą przekroczyć 1 000,00 PLN. Wpływy się nie liczą. |
+| R13 | Sklep może anulować płatność, która czeka na decyzję. Anulowanej płatności nie da się już zatwierdzić. |
+| R14 | Podsumowanie konta pokazuje sumę wpływów, sumę wydatków i liczbę operacji z historii. |
 
 ### Konta demonstracyjne
 
@@ -103,20 +108,26 @@ i uruchom backend ponownie.
 
 ## Testy
 
-Testy backendu są w katalogu [`backend/tests`](backend/tests). Razem jest 62 przypadków testowych,
-a pokrycie kodu wynosi 100%.
+Testy backendu są w katalogu [`backend/tests`](backend/tests). Razem jest 88 przypadków testowych.
+Pokrycie kodu **testami jednostkowymi** wynosi 88% przy wymaganym minimum 80%. Testy integracyjne
+sprawdzają dodatkowo endpointy i bazę danych, ale nie są wliczane do tej miary.
 
 | Rodzaj | Liczba | Katalog | Co sprawdzają |
 |---|---|---|---|
-| Jednostkowe | 42 przypadki (34 funkcje testowe, część z kilkoma zestawami danych) | [`backend/tests/unit`](backend/tests/unit) | Logikę domeny i serwisów w izolacji, bez Flaska i bazy danych. Zależności zastępują fałszywe repozytoria, stały zegar i generator kodów z listy ([`tests/fakes.py`](backend/tests/fakes.py)). |
-| Integracyjne | 20 | [`backend/tests/integration`](backend/tests/integration) | Całe API przez klienta testowego Flaska, z prawdziwą bazą SQLite w pamięci. Każdy test dostaje świeżą aplikację z kontami demonstracyjnymi. Upływ czasu symuluje zegar, który można przesuwać ([`conftest.py`](backend/tests/integration/conftest.py)). |
+| Jednostkowe | 63 przypadki (45 funkcji testowych, część z kilkoma zestawami danych) | [`backend/tests/unit`](backend/tests/unit) | Logikę domeny i serwisów w izolacji, bez Flaska i bazy danych. Zależności zastępują fałszywe repozytoria, stały zegar i generator kodów z listy ([`tests/fakes.py`](backend/tests/fakes.py)). |
+| Integracyjne | 25 | [`backend/tests/integration`](backend/tests/integration) | Całe API przez klienta testowego Flaska, z prawdziwą bazą SQLite w pamięci. Każdy test dostaje świeżą aplikację z kontami demonstracyjnymi. Upływ czasu symuluje zegar, który można przesuwać ([`conftest.py`](backend/tests/integration/conftest.py)). |
 
 ### Konwencja
 
 - Każdy test ma budowę **Given-When-Then**: sekcje `# given`, `# when`, `# then`.
 - Nazwa testu ma postać `test_should_<oczekiwany efekt>_when_<warunek>`.
 - Logika domeny powstawała metodą TDD. W historii commitów test (`test(...)`) jest przed kodem, który
-  go spełnia (`feat(...)`).
+  go spełnia (`feat(...)`). Funkcje R11–R14 powstały w pełnych cyklach **red → green → refactor**:
+  1. 🔴 commit z testem, który jeszcze nie przechodzi,
+  2. 🟢 commit z najprostszym kodem, po którym test przechodzi,
+  3. 🔵 commit z uporządkowaniem kodu przy zielonych testach.
+
+  Przykład z historii: `a100f61 test(transfer)` → `0883d4f feat(transfer)` → `358c594 refactor(transfer)`.
 
 ```python
 def test_should_reject_withdrawal_when_balance_is_insufficient():
@@ -137,14 +148,13 @@ def test_should_reject_withdrawal_when_balance_is_insufficient():
 ```bash
 cd backend
 source .venv/bin/activate
-pytest                    # wszystkie testy
-pytest tests/unit         # tylko jednostkowe
-pytest tests/integration  # tylko integracyjne
-pytest --cov              # z raportem pokrycia (wymagane minimum 95%)
+pytest                     # wszystkie testy
+pytest tests/unit --cov    # testy jednostkowe z raportem pokrycia (wymagane minimum 80%)
+pytest tests/integration   # testy integracyjne
 ```
 
-Te same testy uruchamia GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) przy
-każdym pushu na `main` i `develop` oraz przy każdym pull requeście.
+Te same polecenia uruchamia GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+przy każdym pushu na `main` i `develop` oraz przy każdym pull requeście.
 
 ### Testy jednostkowe
 
@@ -173,25 +183,42 @@ Konto i kwoty: [`test_account.py`](backend/tests/unit/test_account.py),
 
 Płatności: [`test_payment_service.py`](backend/tests/unit/test_payment_service.py)
 
-- [`test_should_create_pending_payment_and_mark_code_as_used_when_code_is_active`](backend/tests/unit/test_payment_service.py#L65): płatność czeka na decyzję, a kod jest oznaczony jako zużyty.
-- [`test_should_reject_payment_when_code_does_not_exist`](backend/tests/unit/test_payment_service.py#L83): nieznany kod daje błąd `CODE_NOT_FOUND`.
-- [`test_should_reject_payment_when_code_has_expired`](backend/tests/unit/test_payment_service.py#L95): kod starszy niż 120 s daje błąd `CODE_EXPIRED`.
-- [`test_should_reject_payment_when_code_was_already_used`](backend/tests/unit/test_payment_service.py#L108): drugie użycie kodu daje błąd `CODE_NOT_ACTIVE`.
-- [`test_should_keep_code_active_when_amount_is_invalid`](backend/tests/unit/test_payment_service.py#L121): błędna kwota nie zużywa kodu.
-- [`test_should_withdraw_funds_and_record_history_when_payment_is_confirmed`](backend/tests/unit/test_payment_service.py#L134): zatwierdzenie pobiera środki i dodaje wpis do historii.
-- [`test_should_keep_balance_and_pending_status_when_funds_are_insufficient`](backend/tests/unit/test_payment_service.py#L153): przy braku środków saldo i status płatności się nie zmieniają.
-- [`test_should_reject_confirmation_when_payment_has_expired`](backend/tests/unit/test_payment_service.py#L171): po 120 s płatności nie da się zatwierdzić (`PAYMENT_EXPIRED`).
-- [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/unit/test_payment_service.py#L186): odrzucenie nie zmienia salda.
-- [`test_should_reject_decision_when_payment_is_not_pending`](backend/tests/unit/test_payment_service.py#L199): rozliczonej płatności nie da się ponownie zatwierdzić ani odrzucić.
-- [`test_should_raise_not_found_when_confirming_unknown_payment`](backend/tests/unit/test_payment_service.py#L212): nieznana płatność daje błąd `PAYMENT_NOT_FOUND`.
+- [`test_should_create_pending_payment_and_mark_code_as_used_when_code_is_active`](backend/tests/unit/test_payment_service.py#L67): płatność czeka na decyzję, a kod jest oznaczony jako zużyty.
+- [`test_should_reject_payment_when_code_does_not_exist`](backend/tests/unit/test_payment_service.py#L85): nieznany kod daje błąd `CODE_NOT_FOUND`.
+- [`test_should_reject_payment_when_code_has_expired`](backend/tests/unit/test_payment_service.py#L97): kod starszy niż 120 s daje błąd `CODE_EXPIRED`.
+- [`test_should_reject_payment_when_code_was_already_used`](backend/tests/unit/test_payment_service.py#L110): drugie użycie kodu daje błąd `CODE_NOT_ACTIVE`.
+- [`test_should_keep_code_active_when_amount_is_invalid`](backend/tests/unit/test_payment_service.py#L123): błędna kwota nie zużywa kodu.
+- [`test_should_withdraw_funds_and_record_history_when_payment_is_confirmed`](backend/tests/unit/test_payment_service.py#L136): zatwierdzenie pobiera środki i dodaje wpis do historii.
+- [`test_should_keep_balance_and_pending_status_when_funds_are_insufficient`](backend/tests/unit/test_payment_service.py#L155): przy braku środków saldo i status płatności się nie zmieniają.
+- [`test_should_reject_confirmation_when_payment_has_expired`](backend/tests/unit/test_payment_service.py#L173): po 120 s płatności nie da się zatwierdzić (`PAYMENT_EXPIRED`).
+- [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/unit/test_payment_service.py#L188): odrzucenie nie zmienia salda.
+- [`test_should_reject_decision_when_payment_is_not_pending`](backend/tests/unit/test_payment_service.py#L201): rozliczonej płatności nie da się ponownie zatwierdzić, odrzucić ani anulować.
+- [`test_should_raise_not_found_when_confirming_unknown_payment`](backend/tests/unit/test_payment_service.py#L214): nieznana płatność daje błąd `PAYMENT_NOT_FOUND`.
+- [`test_should_reject_confirmation_when_daily_spending_limit_would_be_exceeded`](backend/tests/unit/test_payment_service.py#L226): zatwierdzenie ponad dzienny limit daje błąd `DAILY_LIMIT_EXCEEDED`, a saldo i status płatności się nie zmieniają.
+- [`test_should_mark_payment_as_cancelled_when_merchant_cancels_it`](backend/tests/unit/test_payment_service.py#L252): anulowanie przez sklep ustawia status `CANCELLED` i nie zmienia salda.
 
 Przelewy: [`test_transfer_service.py`](backend/tests/unit/test_transfer_service.py)
 
-- [`test_should_move_funds_and_record_both_history_entries_when_transfer_succeeds`](backend/tests/unit/test_transfer_service.py#L46): przelew zmienia oba salda i dodaje wpis w historii każdego z kont.
-- [`test_should_reject_transfer_when_recipient_is_sender`](backend/tests/unit/test_transfer_service.py#L71): przelew na własny numer daje błąd `SELF_TRANSFER`.
-- [`test_should_reject_transfer_when_recipient_does_not_exist`](backend/tests/unit/test_transfer_service.py#L84): nieznany numer daje błąd `RECIPIENT_NOT_FOUND`.
-- [`test_should_keep_both_balances_when_sender_has_insufficient_funds`](backend/tests/unit/test_transfer_service.py#L97): przy braku środków nie zmienia się żadne saldo.
-- [`test_should_reject_transfer_when_amount_is_invalid`](backend/tests/unit/test_transfer_service.py#L114): ujemna kwota jest odrzucana.
+- [`test_should_move_funds_and_record_both_history_entries_when_transfer_succeeds`](backend/tests/unit/test_transfer_service.py#L49): przelew zmienia oba salda i dodaje wpis w historii każdego z kont.
+- [`test_should_reject_transfer_when_recipient_is_sender`](backend/tests/unit/test_transfer_service.py#L74): przelew na własny numer daje błąd `SELF_TRANSFER`.
+- [`test_should_reject_transfer_when_recipient_does_not_exist`](backend/tests/unit/test_transfer_service.py#L87): nieznany numer daje błąd `RECIPIENT_NOT_FOUND`.
+- [`test_should_keep_both_balances_when_sender_has_insufficient_funds`](backend/tests/unit/test_transfer_service.py#L100): przy braku środków nie zmienia się żadne saldo.
+- [`test_should_reject_transfer_when_amount_is_invalid`](backend/tests/unit/test_transfer_service.py#L117): ujemna kwota jest odrzucana.
+- [`test_should_reject_transfer_when_daily_spending_limit_would_be_exceeded`](backend/tests/unit/test_transfer_service.py#L141): przelew ponad dzienny limit daje błąd `DAILY_LIMIT_EXCEEDED`, a żadne saldo się nie zmienia.
+- [`test_should_allow_transfer_that_reaches_daily_limit_exactly`](backend/tests/unit/test_transfer_service.py#L159): wydatki równe dokładnie 1 000,00 zł są dozwolone.
+- [`test_should_not_count_spending_from_previous_day_towards_daily_limit`](backend/tests/unit/test_transfer_service.py#L171): wczorajsze wydatki nie liczą się do dzisiejszego limitu.
+- [`test_should_not_count_incoming_money_towards_daily_limit`](backend/tests/unit/test_transfer_service.py#L184): wpływy nie liczą się do limitu.
+
+Numer telefonu: [`test_phone_number.py`](backend/tests/unit/test_phone_number.py)
+
+- [`test_should_return_nine_digits_when_number_is_written_in_common_format`](backend/tests/unit/test_phone_number.py#L17): zapisy „600 200 300”, „600-200-300”, „+48 600 200 300” i „0048600200300” dają „600200300”.
+- [`test_should_reject_number_when_it_is_not_a_nine_digit_polish_number`](backend/tests/unit/test_phone_number.py#L29): numer za krótki, za długi, z literą albo z innym prefiksem kraju jest odrzucany.
+
+Podsumowanie konta: [`test_history_service.py`](backend/tests/unit/test_history_service.py)
+
+- [`test_should_sum_incoming_and_outgoing_money_separately`](backend/tests/unit/test_history_service.py#L40): wpływy i wydatki są liczone osobno, a operacje innych kont pomijane.
+- [`test_should_return_zeros_when_account_has_no_operations`](backend/tests/unit/test_history_service.py#L56): konto bez operacji ma podsumowanie złożone z zer.
+- [`test_should_raise_not_found_when_summarizing_unknown_account`](backend/tests/unit/test_history_service.py#L67): nieznane konto daje błąd `ACCOUNT_NOT_FOUND`.
 
 Pomocnicze: [`test_fields.py`](backend/tests/unit/test_fields.py),
 [`test_clock.py`](backend/tests/unit/test_clock.py)
@@ -227,12 +254,20 @@ Płatności: [`test_payments_api.py`](backend/tests/integration/test_payments_ap
 - [`test_should_keep_balance_when_confirming_without_sufficient_funds`](backend/tests/integration/test_payments_api.py#L107): brak środków daje 422 `INSUFFICIENT_FUNDS`, a saldo i status płatności się nie zmieniają.
 - [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/integration/test_payments_api.py#L121): odrzucenie zwraca 200 `REJECTED` i nie zmienia salda.
 - [`test_should_refuse_confirmation_when_payment_has_expired`](backend/tests/integration/test_payments_api.py#L135): po 121 s odpowiedź to 422 `PAYMENT_EXPIRED`, a płatność znika z listy do potwierdzenia.
+- [`test_should_cancel_pending_payment_from_terminal`](backend/tests/integration/test_payments_api.py#L150): `POST /api/payments/{id}/cancel` zwraca 200 `CANCELLED`, płatność znika z listy do potwierdzenia i nie da się jej już zatwierdzić.
 
 Przelewy i historia: [`test_transfers_api.py`](backend/tests/integration/test_transfers_api.py)
 
-- [`test_should_move_funds_between_accounts_when_transfer_is_valid`](backend/tests/integration/test_transfers_api.py#L17): `POST /api/transfers` zwraca 201, a salda wynoszą 380,00 i 1 620,00 PLN.
-- [`test_should_return_not_found_when_recipient_phone_is_unknown`](backend/tests/integration/test_transfers_api.py#L32): nieznany numer daje 404 `RECIPIENT_NOT_FOUND`.
-- [`test_should_show_transfer_in_history_of_both_accounts`](backend/tests/integration/test_transfers_api.py#L45): przelew widać w historii nadawcy i odbiorcy.
+- [`test_should_move_funds_between_accounts_when_transfer_is_valid`](backend/tests/integration/test_transfers_api.py#L24): `POST /api/transfers` zwraca 201, a salda wynoszą 380,00 i 1 620,00 PLN.
+- [`test_should_return_not_found_when_recipient_phone_is_unknown`](backend/tests/integration/test_transfers_api.py#L39): nieznany numer daje 404 `RECIPIENT_NOT_FOUND`.
+- [`test_should_show_transfer_in_history_of_both_accounts`](backend/tests/integration/test_transfers_api.py#L52): przelew widać w historii nadawcy i odbiorcy.
+- [`test_should_accept_recipient_phone_written_with_spaces_and_country_prefix`](backend/tests/integration/test_transfers_api.py#L69): przelew na „+48 600 200 300” trafia do Anny Nowak.
+- [`test_should_reject_transfer_when_daily_spending_limit_is_exceeded`](backend/tests/integration/test_transfers_api.py#L81): po przelewie 600 zł kolejny na 500 zł daje 422 `DAILY_LIMIT_EXCEEDED`.
+
+Podsumowanie konta: [`test_summary_api.py`](backend/tests/integration/test_summary_api.py)
+
+- [`test_should_summarize_money_coming_in_and_out_of_account`](backend/tests/integration/test_summary_api.py#L4): `GET /api/accounts/1/summary` po płatności i wpływie zwraca sumy 100,00 i 25,00 zł oraz 2 operacje.
+- [`test_should_return_not_found_for_summary_of_unknown_account`](backend/tests/integration/test_summary_api.py#L30): nieznane konto daje 404 `ACCOUNT_NOT_FOUND`.
 
 Dokumentacja API: [`test_openapi.py`](backend/tests/integration/test_openapi.py)
 
@@ -270,10 +305,12 @@ Kopię specyfikacji odświeża polecenie `cd backend && flask --app app openapi 
 | POST | `/api/accounts/{account_id}/blik-codes` | aplikacja bankowa | wygenerowanie kodu BLIK (poprzedni aktywny kod zostaje anulowany) | 201, 404 |
 | GET | `/api/accounts/{account_id}/pending-payments` | aplikacja bankowa | płatności czekające na potwierdzenie | 200, 404 |
 | GET | `/api/accounts/{account_id}/history` | aplikacja bankowa | historia operacji, od najnowszej | 200, 404 |
+| GET | `/api/accounts/{account_id}/summary` | aplikacja bankowa | suma wpływów i wydatków, liczba operacji | 200, 404 |
 | POST | `/api/payments` | terminal sklepu | rozpoczęcie płatności kodem BLIK | 201, 400, 404, 422 |
 | GET | `/api/payments/{payment_id}` | terminal sklepu | status płatności | 200, 404 |
 | POST | `/api/payments/{payment_id}/confirm` | aplikacja bankowa | zatwierdzenie płatności | 200, 404, 422 |
 | POST | `/api/payments/{payment_id}/reject` | aplikacja bankowa | odrzucenie płatności | 200, 404, 422 |
+| POST | `/api/payments/{payment_id}/cancel` | terminal sklepu | anulowanie oczekującej płatności | 200, 404, 422 |
 | POST | `/api/transfers` | aplikacja bankowa | przelew na numer telefonu | 201, 400, 404, 422 |
 
 Kwoty są przesyłane jako tekst z dwoma miejscami po przecinku (`"25.00"`), a daty w formacie ISO 8601
@@ -293,11 +330,12 @@ poszczególnych pól.
 
 | HTTP | `code` | Kiedy |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | niepoprawne dane wejściowe, np. kod nie ma 6 cyfr albo kwota nie jest liczbą |
+| 400 | `VALIDATION_ERROR` | niepoprawne dane wejściowe, np. kod nie ma 6 cyfr, kwota nie jest liczbą albo numer telefonu nie ma 9 cyfr |
 | 404 | `ACCOUNT_NOT_FOUND`, `CODE_NOT_FOUND`, `PAYMENT_NOT_FOUND`, `RECIPIENT_NOT_FOUND` | brak konta, kodu, płatności albo odbiorcy o podanym numerze |
 | 422 | `CODE_EXPIRED`, `CODE_NOT_ACTIVE` | kod wygasł albo został już użyty lub anulowany |
 | 422 | `INVALID_AMOUNT`, `AMOUNT_LIMIT_EXCEEDED` | kwota nie jest dodatnia, ma więcej niż 2 miejsca po przecinku albo przekracza 5 000,00 PLN |
 | 422 | `INSUFFICIENT_FUNDS` | za mało środków na koncie |
+| 422 | `DAILY_LIMIT_EXCEEDED` | operacja przekroczyłaby dzienny limit wydatków 1 000,00 PLN |
 | 422 | `PAYMENT_EXPIRED`, `PAYMENT_NOT_PENDING` | minął czas na potwierdzenie albo płatność jest już rozliczona |
 | 422 | `SELF_TRANSFER` | przelew na własny numer telefonu |
 
@@ -399,6 +437,10 @@ curl -X POST http://localhost:5001/api/payments \
 | [TC011](#tc011) | Niepoprawna kwota w terminalu | R5 |
 | [TC012](#tc012) | Przelew na numer telefonu | R9, R10 |
 | [TC013](#tc013) | Przelew na własny i nieistniejący numer | R9 |
+| [TC014](#tc014) | Anulowanie płatności przez sklep | R13 |
+| [TC015](#tc015) | Przekroczenie dziennego limitu wydatków | R12 |
+| [TC016](#tc016) | Przelew na numer zapisany ze spacjami i prefiksem | R11 |
+| [TC017](#tc017) | Podsumowanie wpływów i wydatków | R14 |
 
 ### TC001
 
@@ -517,6 +559,42 @@ curl -X POST http://localhost:5001/api/payments \
 | **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **500100200**, kwotę **10,00** i tytuł **Test**, a następnie kliknij **Wyślij przelew**.<br>2. Zmień numer na **999888777** i kliknij **Wyślij przelew**. |
 | **Oczekiwany rezultat** | Krok 1: „Nie można wysłać przelewu na własny numer telefonu”.<br>Krok 2: „Nie znaleziono odbiorcy o tym numerze telefonu”.<br>Saldo nadal wynosi 500,00 zł, a w historii operacji nie ma nowych wpisów. |
 
+### TC014
+
+| **ID** | TC014 |
+|---|---|
+| **Tytuł** | Anulowanie płatności przez sklep |
+| **Warunki początkowe** | Wykonany TC004: płatność „Żabka 25,00 zł” czeka na potwierdzenie, saldo Jana Kowalskiego wynosi 500,00 zł. |
+| **Kroki testowe** | 1. W terminalu kliknij **Anuluj płatność**. |
+| **Oczekiwany rezultat** | Terminal pokazuje „Płatność anulowana przez sklep” i przycisk **Nowa płatność**. W aplikacji bankowej płatność w ciągu 2 sekund znika z listy do potwierdzenia, a saldo nadal wynosi 500,00 zł. |
+
+### TC015
+
+| **ID** | TC015 |
+|---|---|
+| **Tytuł** | Przekroczenie dziennego limitu wydatków |
+| **Warunki początkowe** | Warunki wspólne. W aplikacji bankowej wybrane jest konto „Anna Nowak (600200300)” z saldem 1500,00 zł. Tego dnia z konta nie wykonano żadnych wydatków. |
+| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **500100200**, kwotę **600,00** i tytuł **Czynsz**, a następnie kliknij **Wyślij przelew**.<br>2. Wpisz numer **500100200**, kwotę **500,00** i tytuł **Zakupy**, a następnie kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Krok 1: „Przelew został wysłany”, saldo 900,00 zł.<br>Krok 2: „Przekroczono dzienny limit wydatków 1000.00 PLN”. Saldo nadal wynosi 900,00 zł, a w historii jest tylko przelew z kroku 1. |
+
+### TC016
+
+| **ID** | TC016 |
+|---|---|
+| **Tytuł** | Przelew na numer zapisany ze spacjami i prefiksem |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). |
+| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **+48 600 200 300**, kwotę **50,00** i tytuł **Kino**, a następnie kliknij **Wyślij przelew**.<br>2. Wpisz numer **600-200-300**, kwotę **10,00** i tytuł **Kawa**, a następnie kliknij **Wyślij przelew**.<br>3. Wpisz numer **600 200 30**, kwotę **10,00** i tytuł **Za krótki**, a następnie kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Kroki 1 i 2: „Przelew został wysłany”.<br>Krok 3: „Numer telefonu musi mieć 9 cyfr”.<br>Saldo Jana Kowalskiego wynosi 440,00 zł. |
+
+### TC017
+
+| **ID** | TC017 |
+|---|---|
+| **Tytuł** | Podsumowanie wpływów i wydatków |
+| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. Kafelki pod saldem pokazują „Wpływy 0,00 zł”, „Wydatki 0,00 zł” i „Operacje 0”. |
+| **Kroki testowe** | 1. Wykonaj kroki TC004 i zatwierdź płatność (TC005).<br>2. Wyślij przelew na numer **600200300** na kwotę **120,50** z tytułem **Obiad**.<br>3. Zmień konto na „Anna Nowak (600200300)”. |
+| **Oczekiwany rezultat** | Po kroku 2 kafelki Jana Kowalskiego pokazują „Wpływy 0,00 zł”, „Wydatki 145,50 zł” i „Operacje 2”.<br>Po kroku 3 kafelki Anny Nowak pokazują „Wpływy 120,50 zł”, „Wydatki 0,00 zł” i „Operacje 1”. |
+
 ## Technologie użyte w projekcie
 
 | Obszar | Technologia | Wersja |
@@ -540,8 +618,8 @@ curl -X POST http://localhost:5001/api/payments \
 │   │   ├── amounts/       reguły walidacji kwot
 │   │   ├── codes/         kody BLIK i ich generator
 │   │   ├── payments/      płatności BLIK
-│   │   ├── transfers/     przelewy na numer telefonu
-│   │   ├── history/       historia operacji
+│   │   ├── transfers/     przelewy na numer telefonu i normalizacja numeru
+│   │   ├── history/       historia operacji, podsumowanie konta, dzienny limit wydatków
 │   │   ├── __init__.py    fabryka aplikacji create_app()
 │   │   ├── container.py   składanie serwisów i ich zależności
 │   │   ├── errors.py      kody błędów i wspólny format odpowiedzi błędu
@@ -554,7 +632,8 @@ curl -X POST http://localhost:5001/api/payments \
 │   └── requirements*.txt
 ├── frontend/
 │   └── src/
-│       ├── components/    BankApp, BlikCodeCard, PendingPayments, TransferForm, History, MerchantTerminal
+│       ├── components/    BankApp, AccountSummary, BlikCodeCard, PendingPayments, TransferForm, History,
+│       │                  MerchantTerminal
 │       ├── api.js         klient REST API
 │       ├── format.js      formatowanie kwot, dat i kodów
 │       └── hooks/         usePolling (odświeżanie statusu co 2 s)
@@ -564,7 +643,7 @@ curl -X POST http://localhost:5001/api/payments \
 
 Każdy moduł backendu ma ten sam podział warstw: `routes.py` (HTTP) → `service.py` (reguły biznesowe) →
 `repository.py` (baza danych). Część reguł należy do modeli, np. `Account.withdraw()`,
-`BlikCode.use()` i `Payment.confirm()`.
+`BlikCode.use()`, `Payment.confirm()` i `Payment.cancel()`.
 
 ### Jakość kodu
 
@@ -578,6 +657,9 @@ Każdy moduł backendu ma ten sam podział warstw: `routes.py` (HTTP) → `servi
 | schematy marshmallow | DTO | API nie wystawia modeli bazy danych |
 | `container.py` | composition root | zależności składane w jednym miejscu |
 | `errors.py` | pojedyncza odpowiedzialność (S z SOLID) | jeden format błędów i mapowanie na kody HTTP |
+| `DailySpendingLimit` | pojedyncza odpowiedzialność, wstrzykiwanie zależności | jedna klasa pilnuje limitu dla płatności i przelewów |
+| `AccountSummary` | Value Object (niezmienna `dataclass`) | wynik podsumowania ma typ i nie miesza logiki z serwisem |
+| pole `PhoneNumber` | ponowne użycie przez dziedziczenie pola marshmallow | normalizacja numeru w jednym miejscu |
 
 Zasady obowiązujące w kodzie:
 - nazwy klas, funkcji i zmiennych są po angielsku, a teksty w interfejsie po polsku,
