@@ -335,3 +335,37 @@
 .history__amount--in {
   color: var(--color-success);
 }
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.summary__item {
+  padding: 10px 12px;
+  background: var(--color-surface-muted);
+  border-radius: var(--radius);
+}
+
+.summary__item dt {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.summary__item dd {
+  margin: 0;
+}
+
+.summary__value {
+  font-weight: 700;
+}
+
+.summary__value--in {
+  color: var(--color-success);
+}
+
+.summary__value--out {
+  color: var(--color-danger);
+}
