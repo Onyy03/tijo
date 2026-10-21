@@ -1,8 +1,7 @@
-from types import SimpleNamespace
-
 from app.accounts.service import AccountService
 from app.history.models import HistoryEntry
 from app.history.repository import HistoryRepository
+from app.history.summary import AccountSummary
 
 
 class HistoryService:
@@ -14,19 +13,6 @@ class HistoryService:
         account = self._accounts.get_account(account_id)
         return self._history.find_by_account(account.id)
 
-    def summarize(self, account_id: int) -> SimpleNamespace:
+    def summarize(self, account_id: int) -> AccountSummary:
         account = self._accounts.get_account(account_id)
-        incoming_cents = 0
-        outgoing_cents = 0
-        operations_count = 0
-        for entry in self._history.find_by_account(account.id):
-            if entry.amount_cents > 0:
-                incoming_cents += entry.amount_cents
-            else:
-                outgoing_cents += -entry.amount_cents
-            operations_count += 1
-        return SimpleNamespace(
-            incoming_cents=incoming_cents,
-            outgoing_cents=outgoing_cents,
-            operations_count=operations_count,
-        )
+        return AccountSummary.from_entries(self._history.find_by_account(account.id))

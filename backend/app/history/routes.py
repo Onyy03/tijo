@@ -4,6 +4,7 @@ from app.container import get_services
 from app.errors import ApiErrorSchema
 from app.history.models import HistoryEntry
 from app.history.schemas import AccountSummarySchema, HistoryEntrySchema
+from app.history.summary import AccountSummary
 
 history_blueprint = Blueprint(
     "history", __name__, url_prefix="/api/accounts", description="Historia operacji"
@@ -21,6 +22,6 @@ def list_history(account_id: int) -> list[HistoryEntry]:
 @history_blueprint.get("/<int:account_id>/summary")
 @history_blueprint.response(200, AccountSummarySchema)
 @history_blueprint.alt_response(404, schema=ApiErrorSchema, description="Nie znaleziono konta")
-def get_summary(account_id: int):
+def get_summary(account_id: int) -> AccountSummary:
     """Suma wpływów i wydatków na koncie oraz liczba operacji"""
     return get_services().history.summarize(account_id)
