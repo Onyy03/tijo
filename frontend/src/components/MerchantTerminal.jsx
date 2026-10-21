@@ -13,6 +13,9 @@ function describePayment(payment) {
   if (payment.status === 'REJECTED') {
     return { kind: 'error', text: 'Płatność odrzucona' }
   }
+  if (payment.status === 'CANCELLED') {
+    return { kind: 'error', text: 'Płatność anulowana przez sklep' }
+  }
   if (new Date(payment.expires_at) <= new Date()) {
     return { kind: 'error', text: 'Czas na potwierdzenie minął' }
   }
@@ -60,6 +63,15 @@ function MerchantTerminal() {
       setError(err.message)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleCancel() {
+    setError('')
+    try {
+      setPayment(await api.cancelPayment(payment.id))
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -119,7 +131,11 @@ function MerchantTerminal() {
           <p className="terminal-status__text" role="status" data-testid="terminal-status">
             {description.text}
           </p>
-          {!isWaiting && (
+          {isWaiting ? (
+            <button type="button" className="button button--secondary" onClick={handleCancel}>
+              Anuluj płatność
+            </button>
+          ) : (
             <button type="button" className="button button--secondary" onClick={handleNewPayment}>
               Nowa płatność
             </button>

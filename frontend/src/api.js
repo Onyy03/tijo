@@ -44,5 +44,6 @@ export const api = {
   getPayment: (paymentId) => request(`/payments/${paymentId}`),
   confirmPayment: (paymentId) => post(`/payments/${paymentId}/confirm`),
   rejectPayment: (paymentId) => post(`/payments/${paymentId}/reject`),
+  cancelPayment: (paymentId) => post(`/payments/${paymentId}/cancel`),
   createTransfer: (transfer) => post('/transfers', transfer),
 }

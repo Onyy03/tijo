@@ -61,6 +61,19 @@ def reject_payment(payment_id: int) -> Payment:
     return payment
 
 
+@payments_blueprint.post("/payments/<int:payment_id>/cancel")
+@payments_blueprint.response(200, PaymentSchema)
+@payments_blueprint.alt_response(404, schema=ApiErrorSchema, description="Nie znaleziono płatności")
+@payments_blueprint.alt_response(
+    422, schema=ApiErrorSchema, description="Płatność jest już rozliczona"
+)
+def cancel_payment(payment_id: int) -> Payment:
+    """Anulowanie oczekującej płatności przez terminal sklepu"""
+    payment = get_services().payments.cancel(payment_id)
+    db.session.commit()
+    return payment
+
+
 @payments_blueprint.get("/accounts/<int:account_id>/pending-payments")
 @payments_blueprint.response(200, PaymentSchema(many=True))
 @payments_blueprint.alt_response(404, schema=ApiErrorSchema, description="Nie znaleziono konta")
