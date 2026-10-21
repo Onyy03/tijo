@@ -4,6 +4,7 @@ import MerchantTerminal from './components/MerchantTerminal.jsx'
 import BankLayout from './pages/bank/BankLayout.jsx'
 import BlikPage from './pages/bank/BlikPage.jsx'
 import DashboardPage from './pages/bank/DashboardPage.jsx'
+import TransferPage from './pages/bank/TransferPage.jsx'
 import './App.css'
 
 function TwoPanelDemo() {
@@ -27,6 +28,7 @@ function App() {
       <Route path="/konto/:accountId" element={<BankLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="blik" element={<BlikPage />} />
+        <Route path="przelew" element={<TransferPage />} />
       </Route>
       <Route path="*" element={<TwoPanelDemo />} />
     </Routes>

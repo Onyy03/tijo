@@ -8,6 +8,7 @@ import './bank.css'
 const TABS = [
   { to: '', label: 'Pulpit', icon: 'dashboard', end: true },
   { to: 'blik', label: 'Kod BLIK', icon: 'blik' },
+  { to: 'przelew', label: 'Przelew na telefon', icon: 'transfer' },
 ]
 
 function initials(ownerName) {

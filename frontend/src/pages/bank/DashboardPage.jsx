@@ -43,6 +43,9 @@ function DashboardPage() {
           <Link className="btn btn--on-dark" to="blik">
             Kod BLIK
           </Link>
+          <Link className="btn btn--on-dark" to="przelew">
+            Przelew na telefon
+          </Link>
         </div>
       </section>
 
