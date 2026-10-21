@@ -40,6 +40,7 @@ export const api = {
   generateCode: (accountId) => post(`/accounts/${accountId}/blik-codes`),
   listPendingPayments: (accountId) => request(`/accounts/${accountId}/pending-payments`),
   listHistory: (accountId) => request(`/accounts/${accountId}/history`),
+  getSummary: (accountId) => request(`/accounts/${accountId}/summary`),
   createPayment: (payment) => post('/payments', payment),
   getPayment: (paymentId) => request(`/payments/${paymentId}`),
   confirmPayment: (paymentId) => post(`/payments/${paymentId}/confirm`),

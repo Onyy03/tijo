@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { formatMoney } from '../format.js'
+import AccountSummary from './AccountSummary.jsx'
 import BlikCodeCard from './BlikCodeCard.jsx'
 import History from './History.jsx'
 import PendingPayments from './PendingPayments.jsx'
@@ -75,6 +76,8 @@ function BankApp() {
           </strong>
         </div>
       )}
+
+      {accountId !== null && <AccountSummary accountId={accountId} version={balanceVersion} />}
 
       {accountId !== null && (
         <>
