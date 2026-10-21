@@ -16,6 +16,13 @@ export function formatCode(code) {
   return `${code.slice(0, 3)} ${code.slice(3)}`
 }
 
+export function formatInitials(fullName) {
+  return fullName
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+}
+
 export function formatPhone(phoneNumber) {
   return phoneNumber.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3')
 }

@@ -4,6 +4,7 @@ import MerchantTerminal from './components/MerchantTerminal.jsx'
 import BankLayout from './pages/bank/BankLayout.jsx'
 import BlikPage from './pages/bank/BlikPage.jsx'
 import DashboardPage from './pages/bank/DashboardPage.jsx'
+import HomePage from './pages/home/HomePage.jsx'
 import HistoryPage from './pages/bank/HistoryPage.jsx'
 import TransferPage from './pages/bank/TransferPage.jsx'
 import ShopPage from './pages/shop/ShopPage.jsx'
@@ -27,6 +28,7 @@ function TwoPanelDemo() {
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomePage />} />
       <Route path="/konto/:accountId" element={<BankLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="blik" element={<BlikPage />} />

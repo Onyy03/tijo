@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { api } from '../../api.js'
 import Icon from '../../components/Icon.jsx'
-import { formatPhone } from '../../format.js'
+import { formatInitials, formatPhone } from '../../format.js'
 import PaymentConfirmation from './PaymentConfirmation.jsx'
 import './bank.css'
 
@@ -12,13 +12,6 @@ const TABS = [
   { to: 'przelew', label: 'Przelew na telefon', icon: 'transfer' },
   { to: 'historia', label: 'Historia', icon: 'history' },
 ]
-
-function initials(ownerName) {
-  return ownerName
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-}
 
 function BankLayout() {
   const { accountId } = useParams()
@@ -85,7 +78,7 @@ function BankLayout() {
         </nav>
         <div className="bank-user">
           <span className="bank-user__avatar" aria-hidden="true">
-            {initials(account.owner_name)}
+            {formatInitials(account.owner_name)}
           </span>
           <span className="bank-user__details">
             <strong>{account.owner_name}</strong>
