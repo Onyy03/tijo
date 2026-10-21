@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal
 
@@ -64,13 +65,14 @@ class PaymentService:
         return payment
 
     def reject(self, payment_id: int) -> Payment:
-        payment = self.get_payment(payment_id)
-        payment.reject()
-        return payment
+        return self._close(payment_id, Payment.reject)
 
     def cancel(self, payment_id: int) -> Payment:
+        return self._close(payment_id, Payment.cancel)
+
+    def _close(self, payment_id: int, close: Callable[[Payment], None]) -> Payment:
         payment = self.get_payment(payment_id)
-        payment.cancel()
+        close(payment)
         return payment
 
     def _record_in_history(self, payment: Payment, now: datetime) -> None:

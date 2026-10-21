@@ -54,12 +54,14 @@ class Payment(db.Model):
         self.status = PaymentStatus.CONFIRMED
 
     def reject(self) -> None:
-        self._ensure_pending()
-        self.status = PaymentStatus.REJECTED
+        self._close(PaymentStatus.REJECTED)
 
     def cancel(self) -> None:
+        self._close(PaymentStatus.CANCELLED)
+
+    def _close(self, final_status: PaymentStatus) -> None:
         self._ensure_pending()
-        self.status = PaymentStatus.CANCELLED
+        self.status = final_status
 
     def _ensure_pending(self) -> None:
         if self.status != PaymentStatus.PENDING:
