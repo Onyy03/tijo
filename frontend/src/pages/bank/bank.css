@@ -563,3 +563,87 @@
   font-size: 0.75rem;
   color: var(--ink-muted);
 }
+
+/* BLIK payment confirmation, shown over every bank tab */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14vh 16px 16px;
+  background: rgb(23 32 28 / 45%);
+}
+
+.confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 28px;
+  background: var(--surface);
+  border-top: 4px solid var(--brass);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 48px rgb(23 32 28 / 25%);
+}
+
+.confirm-dialog__eyebrow {
+  margin: 0 0 -10px;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.confirm-dialog__title {
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.confirm-dialog__details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.confirm-dialog__details div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.confirm-dialog__details dt {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.confirm-dialog__details dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.confirm-dialog__amount {
+  font-size: 1.75rem;
+}
+
+.confirm-dialog__time {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.confirm-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirm-dialog__queue {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}

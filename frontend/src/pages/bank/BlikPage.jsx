@@ -1,41 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 import { api } from '../../api.js'
 import { formatCountdown } from '../../format.js'
+import { secondsUntil, useNow } from '../../hooks/useNow.js'
 
 const CODE_LIFETIME_SECONDS = 120
 
-function secondsUntil(isoDate) {
-  return Math.max(0, Math.ceil((new Date(isoDate).getTime() - Date.now()) / 1000))
-}
-
 function BlikPage() {
-  const { account } = useOutletContext()
-  const [blikCode, setBlikCode] = useState(null)
-  const [secondsLeft, setSecondsLeft] = useState(0)
+  const { account, blikCode, setBlikCode } = useOutletContext()
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (blikCode === null) {
-      return undefined
-    }
-    const timer = setInterval(() => setSecondsLeft(secondsUntil(blikCode.expires_at)), 1000)
-    return () => clearInterval(timer)
-  }, [blikCode])
+  const now = useNow(1000)
 
   async function handleGenerate() {
     setError('')
     try {
       const generated = await api.generateCode(account.id)
-      setSecondsLeft(secondsUntil(generated.expires_at))
-      setBlikCode(generated)
+      setBlikCode({ ...generated, accountId: account.id, used: false })
     } catch (err) {
       setError(err.message)
     }
   }
 
-  const isActive = blikCode !== null && secondsLeft > 0
-  const isExpired = blikCode !== null && secondsLeft === 0
+  const secondsLeft =
+    blikCode === null
+      ? 0
+      : Math.min(CODE_LIFETIME_SECONDS, secondsUntil(blikCode.expires_at, now))
+  const isUsed = blikCode !== null && blikCode.used
+  const isActive = blikCode !== null && !isUsed && secondsLeft > 0
+  const isExpired = blikCode !== null && !isUsed && secondsLeft === 0
 
   return (
     <>
@@ -65,9 +57,10 @@ function BlikPage() {
           </>
         ) : (
           <p className="blik-panel__placeholder" role="status">
-            {isExpired
-              ? 'Kod BLIK wygasł. Wygeneruj nowy kod.'
-              : 'Wygeneruj kod, żeby zapłacić w sklepie internetowym lub przy kasie.'}
+            {isUsed && 'Kod został użyty w płatności. Do kolejnej płatności wygeneruj nowy.'}
+            {isExpired && 'Kod BLIK wygasł. Wygeneruj nowy kod.'}
+            {blikCode === null &&
+              'Wygeneruj kod, żeby zapłacić w sklepie internetowym lub przy kasie.'}
           </p>
         )}
         <button type="button" className="btn btn--primary" onClick={handleGenerate}>

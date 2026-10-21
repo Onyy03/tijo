@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { api } from '../../api.js'
 import Icon from '../../components/Icon.jsx'
 import { formatPhone } from '../../format.js'
+import PaymentConfirmation from './PaymentConfirmation.jsx'
 import './bank.css'
 
 const TABS = [
@@ -24,6 +25,8 @@ function BankLayout() {
   const [account, setAccount] = useState(null)
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
+  // kept here, not in the BLIK tab, so the code survives switching tabs
+  const [blikCode, setBlikCode] = useState(null)
   // pages call this after anything that changes the balance
   const refresh = useCallback(() => setVersion((current) => current + 1), [])
 
@@ -95,8 +98,23 @@ function BankLayout() {
         </Link>
       </aside>
       <main className="bank-main" key={account.id}>
-        <Outlet context={{ account, refresh, version }} />
+        <Outlet
+          context={{
+            account,
+            refresh,
+            version,
+            blikCode: blikCode?.accountId === account.id ? blikCode : null,
+            setBlikCode,
+          }}
+        />
       </main>
+      <PaymentConfirmation
+        key={account.id}
+        accountId={account.id}
+        // a BLIK code is single-use: once a payment arrives, the shown code is spent
+        onPaymentArrived={() => setBlikCode((current) => current && { ...current, used: true })}
+        onPaymentDecided={refresh}
+      />
     </div>
   )
 }
