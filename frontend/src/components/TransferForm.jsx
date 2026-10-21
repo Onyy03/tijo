@@ -45,10 +45,10 @@ function TransferForm({ accountId, onTransferSent }) {
         <input
           name="phoneNumber"
           inputMode="tel"
-          maxLength={9}
+          maxLength={16}
           value={form.phoneNumber}
           onChange={handleChange}
-          placeholder="600200300"
+          placeholder="600 200 300"
         />
       </label>
       <label className="field">
