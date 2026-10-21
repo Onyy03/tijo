@@ -37,21 +37,6 @@
   --radius-small: 6px;
   --radius: 10px;
 
-  /* aliases used by the old two-panel view, removed together with it */
-  --color-background: var(--paper);
-  --color-surface: var(--surface);
-  --color-surface-muted: #f7f4ec;
-  --color-border: var(--line);
-  --color-text: var(--ink);
-  --color-text-muted: var(--ink-muted);
-  --color-primary: var(--forest);
-  --color-primary-hover: var(--forest-light);
-  --color-success: var(--positive);
-  --color-danger: var(--negative);
-  --color-code-background: var(--forest);
-  --color-code-text: #ffffff;
-  --shadow: 0 1px 2px rgb(23 32 28 / 8%);
-
   font-family: var(--font-sans);
   line-height: 1.5;
   color: var(--ink);

@@ -12,10 +12,6 @@ export function formatDateTime(isoDate) {
   return dateTimeFormat.format(new Date(isoDate))
 }
 
-export function formatCode(code) {
-  return `${code.slice(0, 3)} ${code.slice(3)}`
-}
-
 export function formatInitials(fullName) {
   return fullName
     .split(' ')
