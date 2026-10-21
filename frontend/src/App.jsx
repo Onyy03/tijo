@@ -6,6 +6,7 @@ import BlikPage from './pages/bank/BlikPage.jsx'
 import DashboardPage from './pages/bank/DashboardPage.jsx'
 import HistoryPage from './pages/bank/HistoryPage.jsx'
 import TransferPage from './pages/bank/TransferPage.jsx'
+import ShopPage from './pages/shop/ShopPage.jsx'
 import './App.css'
 
 function TwoPanelDemo() {
@@ -32,6 +33,7 @@ function App() {
         <Route path="przelew" element={<TransferPage />} />
         <Route path="historia" element={<HistoryPage />} />
       </Route>
+      <Route path="/sklep" element={<ShopPage />} />
       <Route path="*" element={<TwoPanelDemo />} />
     </Routes>
   )
