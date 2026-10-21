@@ -27,8 +27,10 @@ jobs:
         run: ruff check .
       - name: Check formatting
         run: ruff format --check .
-      - name: Run tests with coverage
-        run: pytest --cov
+      - name: Run unit tests with coverage
+        run: pytest tests/unit --cov
+      - name: Run integration tests
+        run: pytest tests/integration
 
   frontend:
     name: Frontend (oxlint + build)
