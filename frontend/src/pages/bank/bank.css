@@ -317,3 +317,132 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* dashboard quick actions */
+
+.balance-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn--on-dark {
+  color: #ffffff;
+  background: transparent;
+  border-color: rgb(255 255 255 / 35%);
+}
+
+.btn--on-dark:hover:not(:disabled) {
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 60%);
+}
+
+.bank-card--quiet {
+  background: transparent;
+}
+
+/* BLIK tab */
+
+.blik-panel {
+  align-items: flex-start;
+}
+
+.blik-panel__digits {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.blik-panel__digit {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 66px;
+  font-size: 2.25rem;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 3px;
+  border-radius: var(--radius-small);
+}
+
+.blik-panel__digit:nth-child(3) {
+  margin-right: 14px;
+}
+
+.blik-panel__timer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(100%, 390px);
+}
+
+.blik-panel__bar {
+  height: 4px;
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.blik-panel__bar span {
+  display: block;
+  height: 100%;
+  background: var(--forest);
+  transition: width 1s linear;
+}
+
+.blik-panel__time {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.blik-panel__placeholder {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.blik-panel__warning {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--forest);
+  border: 1px solid var(--brass);
+  border-radius: 50%;
+}
+
+@media (width <= 760px) {
+  .blik-panel__digit {
+    width: 42px;
+    height: 54px;
+    font-size: 1.75rem;
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router'
+import { Link, useOutletContext } from 'react-router'
 import { api } from '../../api.js'
 import { formatMoney } from '../../format.js'
 import OperationList from './OperationList.jsx'
@@ -39,6 +39,11 @@ function DashboardPage() {
         <strong className="balance-card__amount mono" data-testid="balance">
           {formatMoney(account.balance)}
         </strong>
+        <div className="balance-card__actions">
+          <Link className="btn btn--on-dark" to="blik">
+            Kod BLIK
+          </Link>
+        </div>
       </section>
 
       {summary && (

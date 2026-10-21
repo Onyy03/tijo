@@ -5,7 +5,10 @@ import Icon from '../../components/Icon.jsx'
 import { formatPhone } from '../../format.js'
 import './bank.css'
 
-const TABS = [{ to: '', label: 'Pulpit', icon: 'dashboard', end: true }]
+const TABS = [
+  { to: '', label: 'Pulpit', icon: 'dashboard', end: true },
+  { to: 'blik', label: 'Kod BLIK', icon: 'blik' },
+]
 
 function initials(ownerName) {
   return ownerName
