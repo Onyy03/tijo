@@ -71,7 +71,12 @@ function DashboardPage() {
       )}
 
       <section className="bank-card">
-        <h2 className="bank-card__title">Ostatnie operacje</h2>
+        <div className="bank-card__header">
+          <h2 className="bank-card__title">Ostatnie operacje</h2>
+          <Link className="bank-card__link" to="historia">
+            Cała historia
+          </Link>
+        </div>
         <OperationList entries={recent} />
       </section>
 
