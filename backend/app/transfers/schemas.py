@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields, validate
 
+from app.fields import PhoneNumber
+
 AMOUNT_ERRORS = {
     "required": "Podaj kwotę",
     "invalid": "Kwota musi być liczbą",
@@ -13,9 +15,8 @@ class CreateTransferSchema(Schema):
         error_messages={"required": "Podaj konto nadawcy", "invalid": "Niepoprawne konto"},
         metadata={"example": 1},
     )
-    to_phone_number = fields.Str(
+    to_phone_number = PhoneNumber(
         required=True,
-        validate=validate.Regexp(r"^\d{9}$", error="Numer telefonu musi mieć 9 cyfr"),
         error_messages={"required": "Podaj numer telefonu odbiorcy"},
         metadata={"example": "600200300"},
     )
