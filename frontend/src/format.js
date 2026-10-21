@@ -16,6 +16,10 @@ export function formatCode(code) {
   return `${code.slice(0, 3)} ${code.slice(3)}`
 }
 
+export function formatPhone(phoneNumber) {
+  return phoneNumber.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3')
+}
+
 export function formatCountdown(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = String(totalSeconds % 60).padStart(2, '0')

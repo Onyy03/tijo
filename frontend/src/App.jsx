@@ -1,8 +1,11 @@
+import { Route, Routes } from 'react-router'
 import BankApp from './components/BankApp.jsx'
 import MerchantTerminal from './components/MerchantTerminal.jsx'
+import BankLayout from './pages/bank/BankLayout.jsx'
+import DashboardPage from './pages/bank/DashboardPage.jsx'
 import './App.css'
 
-function App() {
+function TwoPanelDemo() {
   return (
     <div className="layout">
       <header className="layout__header">
@@ -14,6 +17,17 @@ function App() {
         <MerchantTerminal />
       </main>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/konto/:accountId" element={<BankLayout />}>
+        <Route index element={<DashboardPage />} />
+      </Route>
+      <Route path="*" element={<TwoPanelDemo />} />
+    </Routes>
   )
 }
 
