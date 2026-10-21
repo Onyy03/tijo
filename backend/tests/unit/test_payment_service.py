@@ -8,7 +8,8 @@ from app.accounts.service import AccountService
 from app.amounts.rules import create_amount_validator
 from app.codes.models import BlikCode, BlikCodeStatus
 from app.errors import BusinessError, ErrorCode, NotFoundError
-from app.history.models import HistoryEntryType
+from app.history.models import HistoryEntry, HistoryEntryType
+from app.history.spending_limit import DailySpendingLimit
 from app.payments.models import Payment, PaymentStatus
 from app.payments.service import PaymentService
 from tests.fakes import (
@@ -53,6 +54,7 @@ def service(account, codes, payments, history) -> PaymentService:
         payments,
         history,
         create_amount_validator(),
+        DailySpendingLimit(history),
         FixedClock(NOW),
     )
 
@@ -219,3 +221,29 @@ def test_should_raise_not_found_when_confirming_unknown_payment(service):
 
     # then
     assert error.value.code == ErrorCode.PAYMENT_NOT_FOUND
+
+
+def test_should_reject_confirmation_when_daily_spending_limit_would_be_exceeded(
+    service, codes, account, history
+):
+    # given
+    account.balance_cents = 300_000
+    history.add(
+        HistoryEntry(
+            account_id=ACCOUNT_ID,
+            type=HistoryEntryType.PAYMENT,
+            amount_cents=-99_000,
+            description="Wcześniejsze zakupy",
+            created_at=NOW,
+        )
+    )
+    payment = start_payment(service, codes)
+
+    # when
+    with pytest.raises(BusinessError) as error:
+        service.confirm(payment.id)
+
+    # then
+    assert error.value.code == ErrorCode.DAILY_LIMIT_EXCEEDED
+    assert account.balance_cents == 300_000
+    assert payment.status == PaymentStatus.PENDING

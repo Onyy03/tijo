@@ -7,6 +7,7 @@ from app.clock import Clock
 from app.errors import BusinessError, ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
 from app.history.repository import HistoryRepository
+from app.history.spending_limit import DailySpendingLimit
 from app.money import to_cents
 
 
@@ -16,11 +17,13 @@ class TransferService:
         accounts: AccountService,
         history: HistoryRepository,
         amount_validator: AmountValidator,
+        spending_limit: DailySpendingLimit,
         clock: Clock,
     ) -> None:
         self._accounts = accounts
         self._history = history
         self._amount_validator = amount_validator
+        self._spending_limit = spending_limit
         self._clock = clock
 
     def transfer(
@@ -31,6 +34,8 @@ class TransferService:
         sender = self._accounts.get_account(from_account_id)
         recipient = self._find_recipient(sender, to_phone_number)
         amount_cents = to_cents(amount)
+        now = self._clock.now()
+        self._spending_limit.check(sender.id, amount_cents, now)
         sender.withdraw(amount_cents)
         recipient.deposit(amount_cents)
         return self._record_in_history(sender, recipient, amount_cents, title)

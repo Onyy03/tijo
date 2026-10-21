@@ -11,6 +11,7 @@ from app.codes.repository import BlikCodeRepository
 from app.codes.service import BlikCodeService
 from app.history.repository import HistoryRepository
 from app.history.service import HistoryService
+from app.history.spending_limit import DailySpendingLimit
 from app.payments.repository import PaymentRepository
 from app.payments.service import PaymentService
 from app.transfers.service import TransferService
@@ -32,6 +33,7 @@ def init_services(app: Flask, clock: Clock, code_generator: CodeGenerator) -> No
     code_repository = BlikCodeRepository()
     history_repository = HistoryRepository()
     amount_validator = create_amount_validator()
+    spending_limit = DailySpendingLimit(history_repository)
     app.extensions[EXTENSION_KEY] = Services(
         accounts=accounts,
         codes=BlikCodeService(accounts, code_repository, code_generator, clock),
@@ -41,9 +43,12 @@ def init_services(app: Flask, clock: Clock, code_generator: CodeGenerator) -> No
             PaymentRepository(),
             history_repository,
             amount_validator,
+            spending_limit,
             clock,
         ),
-        transfers=TransferService(accounts, history_repository, amount_validator, clock),
+        transfers=TransferService(
+            accounts, history_repository, amount_validator, spending_limit, clock
+        ),
         history=HistoryService(accounts, history_repository),
     )
 

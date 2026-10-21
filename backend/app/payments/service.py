@@ -8,6 +8,7 @@ from app.codes.repository import BlikCodeRepository
 from app.errors import ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
 from app.history.repository import HistoryRepository
+from app.history.spending_limit import DailySpendingLimit
 from app.money import to_cents
 from app.payments.models import Payment
 from app.payments.repository import PaymentRepository
@@ -21,6 +22,7 @@ class PaymentService:
         payments: PaymentRepository,
         history: HistoryRepository,
         amount_validator: AmountValidator,
+        spending_limit: DailySpendingLimit,
         clock: Clock,
     ) -> None:
         self._accounts = accounts
@@ -28,6 +30,7 @@ class PaymentService:
         self._payments = payments
         self._history = history
         self._amount_validator = amount_validator
+        self._spending_limit = spending_limit
         self._clock = clock
 
     def create_payment(self, code: str, amount: Decimal, merchant_name: str) -> Payment:
@@ -55,6 +58,7 @@ class PaymentService:
         payment = self.get_payment(payment_id)
         account = self._accounts.get_account(payment.account_id)
         now = self._clock.now()
+        self._spending_limit.check(account.id, payment.amount_cents, now)
         payment.confirm(account, now)
         self._record_in_history(payment, now)
         return payment
