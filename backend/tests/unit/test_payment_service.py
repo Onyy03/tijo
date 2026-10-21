@@ -197,7 +197,7 @@ def test_should_mark_payment_as_rejected_without_charging_account(service, codes
     assert account.balance_cents == 50_000
 
 
-@pytest.mark.parametrize("decision", ["confirm", "reject"])
+@pytest.mark.parametrize("decision", ["confirm", "reject", "cancel"])
 def test_should_reject_decision_when_payment_is_not_pending(service, codes, decision):
     # given
     payment = start_payment(service, codes)
@@ -247,3 +247,15 @@ def test_should_reject_confirmation_when_daily_spending_limit_would_be_exceeded(
     assert error.value.code == ErrorCode.DAILY_LIMIT_EXCEEDED
     assert account.balance_cents == 300_000
     assert payment.status == PaymentStatus.PENDING
+
+
+def test_should_mark_payment_as_cancelled_when_merchant_cancels_it(service, codes, account):
+    # given
+    payment = start_payment(service, codes)
+
+    # when
+    service.cancel(payment.id)
+
+    # then
+    assert payment.status == PaymentStatus.CANCELLED
+    assert account.balance_cents == 50_000

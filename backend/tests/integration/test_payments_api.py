@@ -145,3 +145,19 @@ def test_should_refuse_confirmation_when_payment_has_expired(client, clock):
     assert response.get_json()["code"] == "PAYMENT_EXPIRED"
     assert get_balance(client, JAN_ID) == "500.00"
     assert client.get(f"/api/accounts/{JAN_ID}/pending-payments").get_json() == []
+
+
+def test_should_cancel_pending_payment_from_terminal(client):
+    # given
+    payment_id = create_pending_payment(client, JAN_ID)
+
+    # when
+    response = client.post(f"/api/payments/{payment_id}/cancel")
+
+    # then
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "CANCELLED"
+    assert client.get(f"/api/accounts/{JAN_ID}/pending-payments").get_json() == []
+    confirmation = client.post(f"/api/payments/{payment_id}/confirm")
+    assert confirmation.get_json()["code"] == "PAYMENT_NOT_PENDING"
+    assert get_balance(client, JAN_ID) == "500.00"
