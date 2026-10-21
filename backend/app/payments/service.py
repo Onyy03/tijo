@@ -5,10 +5,11 @@ from app.accounts.service import AccountService
 from app.amounts.rules import AmountValidator
 from app.clock import Clock
 from app.codes.repository import BlikCodeRepository
-from app.errors import BusinessError, ErrorCode, NotFoundError
+from app.errors import ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
 from app.history.repository import HistoryRepository
-from app.money import DAILY_SPENDING_LIMIT_CENTS, to_cents
+from app.history.spending_limit import DailySpendingLimit
+from app.money import to_cents
 from app.payments.models import Payment
 from app.payments.repository import PaymentRepository
 
@@ -21,6 +22,7 @@ class PaymentService:
         payments: PaymentRepository,
         history: HistoryRepository,
         amount_validator: AmountValidator,
+        spending_limit: DailySpendingLimit,
         clock: Clock,
     ) -> None:
         self._accounts = accounts
@@ -28,6 +30,7 @@ class PaymentService:
         self._payments = payments
         self._history = history
         self._amount_validator = amount_validator
+        self._spending_limit = spending_limit
         self._clock = clock
 
     def create_payment(self, code: str, amount: Decimal, merchant_name: str) -> Payment:
@@ -55,15 +58,7 @@ class PaymentService:
         payment = self.get_payment(payment_id)
         account = self._accounts.get_account(payment.account_id)
         now = self._clock.now()
-        spent_today = sum(
-            -entry.amount_cents
-            for entry in self._history.find_by_account(account.id)
-            if entry.amount_cents < 0 and entry.created_at.date() == now.date()
-        )
-        if spent_today + payment.amount_cents > DAILY_SPENDING_LIMIT_CENTS:
-            raise BusinessError(
-                ErrorCode.DAILY_LIMIT_EXCEEDED, "Przekroczono dzienny limit wydatków 1000.00 PLN"
-            )
+        self._spending_limit.check(account.id, payment.amount_cents, now)
         payment.confirm(account, now)
         self._record_in_history(payment, now)
         return payment

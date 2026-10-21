@@ -9,6 +9,7 @@ from app.amounts.rules import create_amount_validator
 from app.codes.models import BlikCode, BlikCodeStatus
 from app.errors import BusinessError, ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
+from app.history.spending_limit import DailySpendingLimit
 from app.payments.models import Payment, PaymentStatus
 from app.payments.service import PaymentService
 from tests.fakes import (
@@ -53,6 +54,7 @@ def service(account, codes, payments, history) -> PaymentService:
         payments,
         history,
         create_amount_validator(),
+        DailySpendingLimit(history),
         FixedClock(NOW),
     )
 

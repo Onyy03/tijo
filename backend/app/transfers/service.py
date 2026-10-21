@@ -7,7 +7,8 @@ from app.clock import Clock
 from app.errors import BusinessError, ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
 from app.history.repository import HistoryRepository
-from app.money import DAILY_SPENDING_LIMIT_CENTS, to_cents
+from app.history.spending_limit import DailySpendingLimit
+from app.money import to_cents
 
 
 class TransferService:
@@ -16,11 +17,13 @@ class TransferService:
         accounts: AccountService,
         history: HistoryRepository,
         amount_validator: AmountValidator,
+        spending_limit: DailySpendingLimit,
         clock: Clock,
     ) -> None:
         self._accounts = accounts
         self._history = history
         self._amount_validator = amount_validator
+        self._spending_limit = spending_limit
         self._clock = clock
 
     def transfer(
@@ -32,15 +35,7 @@ class TransferService:
         recipient = self._find_recipient(sender, to_phone_number)
         amount_cents = to_cents(amount)
         now = self._clock.now()
-        spent_today = sum(
-            -entry.amount_cents
-            for entry in self._history.find_by_account(sender.id)
-            if entry.amount_cents < 0 and entry.created_at.date() == now.date()
-        )
-        if spent_today + amount_cents > DAILY_SPENDING_LIMIT_CENTS:
-            raise BusinessError(
-                ErrorCode.DAILY_LIMIT_EXCEEDED, "Przekroczono dzienny limit wydatków 1000.00 PLN"
-            )
+        self._spending_limit.check(sender.id, amount_cents, now)
         sender.withdraw(amount_cents)
         recipient.deposit(amount_cents)
         return self._record_in_history(sender, recipient, amount_cents, title)

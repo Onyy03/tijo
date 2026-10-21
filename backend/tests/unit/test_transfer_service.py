@@ -8,6 +8,7 @@ from app.accounts.service import AccountService
 from app.amounts.rules import create_amount_validator
 from app.errors import BusinessError, ErrorCode, NotFoundError
 from app.history.models import HistoryEntry, HistoryEntryType
+from app.history.spending_limit import DailySpendingLimit
 from app.transfers.service import TransferService
 from tests.fakes import FixedClock, InMemoryAccountRepository, InMemoryHistoryRepository
 
@@ -40,7 +41,9 @@ def history() -> InMemoryHistoryRepository:
 @pytest.fixture
 def service(sender, recipient, history) -> TransferService:
     accounts = AccountService(InMemoryAccountRepository(sender, recipient))
-    return TransferService(accounts, history, create_amount_validator(), FixedClock(NOW))
+    return TransferService(
+        accounts, history, create_amount_validator(), DailySpendingLimit(history), FixedClock(NOW)
+    )
 
 
 def test_should_move_funds_and_record_both_history_entries_when_transfer_succeeds(
