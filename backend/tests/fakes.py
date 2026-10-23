@@ -100,3 +100,13 @@ class InMemoryHistoryRepository:
 
     def add(self, entry: "HistoryEntry") -> None:
         self.entries.append(entry)
+
+    def find_by_account(self, account_id: int) -> "list[HistoryEntry]":
+        return [entry for entry in self.entries if entry.account_id == account_id]
+
+    def sum_spent_between(self, account_id: int, start: datetime, end: datetime) -> int:
+        return -sum(
+            entry.amount_cents
+            for entry in self.find_by_account(account_id)
+            if entry.amount_cents < 0 and start <= entry.created_at < end
+        )

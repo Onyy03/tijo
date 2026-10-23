@@ -327,6 +327,60 @@
         }
       ]
     },
+    "/api/payments/{payment_id}/cancel": {
+      "post": {
+        "responses": {
+          "422": {
+            "description": "P\u0142atno\u015b\u0107 jest ju\u017c rozliczona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nie znaleziono p\u0142atno\u015bci",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Anulowanie oczekuj\u0105cej p\u0142atno\u015bci przez terminal sklepu",
+        "tags": [
+          "payments"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "payment_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
     "/api/accounts/{account_id}/pending-payments": {
       "get": {
         "responses": {
@@ -461,6 +515,50 @@
           }
         },
         "summary": "Historia operacji na koncie, od najnowszej",
+        "tags": [
+          "history"
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "account_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/accounts/{account_id}/summary": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Nie znaleziono konta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Suma wp\u0142yw\u00f3w i wydatk\u00f3w na koncie oraz liczba operacji",
         "tags": [
           "history"
         ]
@@ -662,7 +760,8 @@
             "enum": [
               "PENDING",
               "CONFIRMED",
-              "REJECTED"
+              "REJECTED",
+              "CANCELLED"
             ]
           },
           "created_at": {
@@ -687,7 +786,6 @@
           },
           "to_phone_number": {
             "type": "string",
-            "pattern": "^\\d{9}$",
             "example": "600200300"
           },
           "amount": {
@@ -736,6 +834,24 @@
             "type": "string",
             "format": "date-time",
             "example": "2026-11-02T12:00:00+00:00"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccountSummary": {
+        "type": "object",
+        "properties": {
+          "total_incoming": {
+            "type": "string",
+            "example": "120.50"
+          },
+          "total_outgoing": {
+            "type": "string",
+            "example": "145.50"
+          },
+          "operations_count": {
+            "type": "integer",
+            "example": 3
           }
         },
         "additionalProperties": false

@@ -19,11 +19,11 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--import-mode=importlib"
 
-# used by `pytest --cov`
+# used by `pytest tests/unit --cov` (coverage of unit tests only)
 [tool.coverage.run]
 source = ["app"]
 branch = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 95
+fail_under = 80

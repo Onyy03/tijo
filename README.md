@@ -18,19 +18,23 @@ MiniBlik – symulator płatności kodem BLIK
 ## Opis projektu
 
 MiniBlik odtwarza w uproszczeniu płatność kodem BLIK. Użytkownik generuje w aplikacji bankowej
-6-cyfrowy kod, sprzedawca wpisuje go w terminalu razem z kwotą, a użytkownik zatwierdza albo odrzuca
-płatność w aplikacji. Oprócz tego można wysłać przelew na numer telefonu i przejrzeć historię operacji.
+6-cyfrowy kod, wpisuje go w sklepie internetowym, a potem zatwierdza albo odrzuca płatność
+w bankowości. Oprócz tego można wysłać przelew na numer telefonu, przejrzeć historię operacji
+i podsumowanie wpływów oraz wydatków.
 
-Aplikacja ma dwa panele, które działają obok siebie w przeglądarce:
+Aplikacja ma dwie części z osobnymi adresami. Najwygodniej otworzyć je w dwóch oknach obok siebie:
 
-- **Aplikacja bankowa**:
-  - wybór konta i saldo,
-  - generowanie kodu BLIK z odliczaniem ważności,
-  - zatwierdzanie i odrzucanie płatności,
-  - przelew na numer telefonu,
-  - historia operacji.
-- **Terminal sklepu**: płatność kodem BLIK i podgląd jej statusu (oczekuje, zatwierdzona, odrzucona,
-  czas minął).
+| Adres | Strona | Co można zrobić |
+|---|---|---|
+| `/` | strona startowa | wybrać klienta banku albo przejść do sklepu |
+| `/konto/{id}` | **MiniBank**, pulpit | saldo, suma wpływów i wydatków, ostatnie operacje |
+| `/konto/{id}/blik` | MiniBank, zakładka „Kod BLIK” | wygenerować kod ważny 2 minuty |
+| `/konto/{id}/przelew` | MiniBank, zakładka „Przelew na telefon” | wysłać przelew na numer telefonu, także zapisany ze spacjami lub z prefiksem +48 |
+| `/konto/{id}/historia` | MiniBank, zakładka „Historia” | przejrzeć operacje z filtrem: wszystkie, wpływy, wydatki |
+| `/sklep` | **Delikatesy Kłos**, fikcyjny sklep internetowy | złożyć koszyk, zapłacić kodem BLIK, anulować oczekującą płatność |
+
+Gdy sklep wyśle płatność, w bankowości na każdej zakładce pojawia się okno „Potwierdź płatność”
+z odbiorcą, kwotą i czasem na decyzję.
 
 ### Reguły biznesowe
 
@@ -46,6 +50,10 @@ Aplikacja ma dwa panele, które działają obok siebie w przeglądarce:
 | R8 | Zatwierdzić lub odrzucić można tylko płatność, która czeka na decyzję. |
 | R9 | Przelew wymaga istniejącego odbiorcy i wystarczających środków. Nie można wysłać przelewu na własny numer. Kwota według R5. |
 | R10 | Każda zmiana salda dodaje wpis do historii operacji. |
+| R11 | Numer telefonu odbiorcy można podać ze spacjami, myślnikami i prefiksem +48 lub 0048. Po usunięciu tych znaków musi zostać 9 cyfr. |
+| R12 | Wydatki z konta (zatwierdzone płatności i przelewy wychodzące) w jednym dniu (UTC) nie mogą przekroczyć 1 000,00 PLN. Wpływy się nie liczą. |
+| R13 | Sklep może anulować płatność, która czeka na decyzję. Anulowanej płatności nie da się już zatwierdzić. |
+| R14 | Podsumowanie konta pokazuje sumę wpływów, sumę wydatków i liczbę operacji z historii. |
 
 ### Konta demonstracyjne
 
@@ -59,17 +67,33 @@ Przy pierwszym uruchomieniu tworzą się konta demonstracyjne:
 
 ### Zrzuty ekranu
 
-Wygenerowany kod BLIK i terminal sklepu przed płatnością:
+Strona startowa z wyborem klienta i sklepu:
 
-![Kod BLIK i terminal sklepu](docs/img/blik-code.png)
+![Strona startowa](docs/img/home.png)
 
-Płatność czeka na potwierdzenie w aplikacji bankowej:
+Sklep z koszykiem i polem na kod BLIK:
 
-![Płatność do potwierdzenia](docs/img/pending-payment.png)
+![Sklep internetowy](docs/img/shop-cart.png)
 
-Po zatwierdzeniu płatności i wysłaniu przelewu na telefon (saldo i historia operacji):
+Bankowość: wygenerowany kod BLIK:
 
-![Historia operacji](docs/img/history.png)
+![Kod BLIK](docs/img/bank-blik.png)
+
+Bankowość: prośba o potwierdzenie płatności ze sklepu:
+
+![Potwierdzenie płatności](docs/img/bank-confirm.png)
+
+Sklep po zatwierdzeniu płatności w banku:
+
+![Zamówienie opłacone](docs/img/shop-success.png)
+
+Bankowość: pulpit po płatności i przelewach:
+
+![Pulpit](docs/img/bank-dashboard.png)
+
+Bankowość: przelew na telefon:
+
+![Przelew na telefon](docs/img/bank-transfer.png)
 
 ## Uruchomienie projektu
 
@@ -95,7 +119,9 @@ npm run dev
 
 | Adres | Co jest pod nim |
 |---|---|
-| http://localhost:5173 | aplikacja |
+| http://localhost:5173 | strona startowa (wybór klienta lub sklepu) |
+| http://localhost:5173/konto/1 | bankowość Jana Kowalskiego (`/konto/2`, `/konto/3` dla pozostałych) |
+| http://localhost:5173/sklep | sklep internetowy |
 | http://localhost:5001/api/docs | dokumentacja API (Swagger UI) |
 
 Baza SQLite leży w `backend/instance/miniblik.db`. Żeby wrócić do danych startowych, usuń ten plik
@@ -103,20 +129,26 @@ i uruchom backend ponownie.
 
 ## Testy
 
-Testy backendu są w katalogu [`backend/tests`](backend/tests). Razem jest 62 przypadków testowych,
-a pokrycie kodu wynosi 100%.
+Testy backendu są w katalogu [`backend/tests`](backend/tests). Razem jest 88 przypadków testowych.
+Pokrycie kodu **testami jednostkowymi** wynosi 88% przy wymaganym minimum 80%. Testy integracyjne
+sprawdzają dodatkowo endpointy i bazę danych, ale nie są wliczane do tej miary.
 
 | Rodzaj | Liczba | Katalog | Co sprawdzają |
 |---|---|---|---|
-| Jednostkowe | 42 przypadki (34 funkcje testowe, część z kilkoma zestawami danych) | [`backend/tests/unit`](backend/tests/unit) | Logikę domeny i serwisów w izolacji, bez Flaska i bazy danych. Zależności zastępują fałszywe repozytoria, stały zegar i generator kodów z listy ([`tests/fakes.py`](backend/tests/fakes.py)). |
-| Integracyjne | 20 | [`backend/tests/integration`](backend/tests/integration) | Całe API przez klienta testowego Flaska, z prawdziwą bazą SQLite w pamięci. Każdy test dostaje świeżą aplikację z kontami demonstracyjnymi. Upływ czasu symuluje zegar, który można przesuwać ([`conftest.py`](backend/tests/integration/conftest.py)). |
+| Jednostkowe | 63 przypadki (45 funkcji testowych, część z kilkoma zestawami danych) | [`backend/tests/unit`](backend/tests/unit) | Logikę domeny i serwisów w izolacji, bez Flaska i bazy danych. Zależności zastępują fałszywe repozytoria, stały zegar i generator kodów z listy ([`tests/fakes.py`](backend/tests/fakes.py)). |
+| Integracyjne | 25 | [`backend/tests/integration`](backend/tests/integration) | Całe API przez klienta testowego Flaska, z prawdziwą bazą SQLite w pamięci. Każdy test dostaje świeżą aplikację z kontami demonstracyjnymi. Upływ czasu symuluje zegar, który można przesuwać ([`conftest.py`](backend/tests/integration/conftest.py)). |
 
 ### Konwencja
 
 - Każdy test ma budowę **Given-When-Then**: sekcje `# given`, `# when`, `# then`.
 - Nazwa testu ma postać `test_should_<oczekiwany efekt>_when_<warunek>`.
 - Logika domeny powstawała metodą TDD. W historii commitów test (`test(...)`) jest przed kodem, który
-  go spełnia (`feat(...)`).
+  go spełnia (`feat(...)`). Funkcje R11–R14 powstały w pełnych cyklach **red → green → refactor**:
+  1. 🔴 commit z testem, który jeszcze nie przechodzi,
+  2. 🟢 commit z najprostszym kodem, po którym test przechodzi,
+  3. 🔵 commit z uporządkowaniem kodu przy zielonych testach.
+
+  Przykład z historii: `a100f61 test(transfer)` → `0883d4f feat(transfer)` → `358c594 refactor(transfer)`.
 
 ```python
 def test_should_reject_withdrawal_when_balance_is_insufficient():
@@ -137,14 +169,13 @@ def test_should_reject_withdrawal_when_balance_is_insufficient():
 ```bash
 cd backend
 source .venv/bin/activate
-pytest                    # wszystkie testy
-pytest tests/unit         # tylko jednostkowe
-pytest tests/integration  # tylko integracyjne
-pytest --cov              # z raportem pokrycia (wymagane minimum 95%)
+pytest                     # wszystkie testy
+pytest tests/unit --cov    # testy jednostkowe z raportem pokrycia (wymagane minimum 80%)
+pytest tests/integration   # testy integracyjne
 ```
 
-Te same testy uruchamia GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) przy
-każdym pushu na `main` i `develop` oraz przy każdym pull requeście.
+Te same polecenia uruchamia GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+przy każdym pushu na `main` i `develop` oraz przy każdym pull requeście.
 
 ### Testy jednostkowe
 
@@ -173,25 +204,42 @@ Konto i kwoty: [`test_account.py`](backend/tests/unit/test_account.py),
 
 Płatności: [`test_payment_service.py`](backend/tests/unit/test_payment_service.py)
 
-- [`test_should_create_pending_payment_and_mark_code_as_used_when_code_is_active`](backend/tests/unit/test_payment_service.py#L65): płatność czeka na decyzję, a kod jest oznaczony jako zużyty.
-- [`test_should_reject_payment_when_code_does_not_exist`](backend/tests/unit/test_payment_service.py#L83): nieznany kod daje błąd `CODE_NOT_FOUND`.
-- [`test_should_reject_payment_when_code_has_expired`](backend/tests/unit/test_payment_service.py#L95): kod starszy niż 120 s daje błąd `CODE_EXPIRED`.
-- [`test_should_reject_payment_when_code_was_already_used`](backend/tests/unit/test_payment_service.py#L108): drugie użycie kodu daje błąd `CODE_NOT_ACTIVE`.
-- [`test_should_keep_code_active_when_amount_is_invalid`](backend/tests/unit/test_payment_service.py#L121): błędna kwota nie zużywa kodu.
-- [`test_should_withdraw_funds_and_record_history_when_payment_is_confirmed`](backend/tests/unit/test_payment_service.py#L134): zatwierdzenie pobiera środki i dodaje wpis do historii.
-- [`test_should_keep_balance_and_pending_status_when_funds_are_insufficient`](backend/tests/unit/test_payment_service.py#L153): przy braku środków saldo i status płatności się nie zmieniają.
-- [`test_should_reject_confirmation_when_payment_has_expired`](backend/tests/unit/test_payment_service.py#L171): po 120 s płatności nie da się zatwierdzić (`PAYMENT_EXPIRED`).
-- [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/unit/test_payment_service.py#L186): odrzucenie nie zmienia salda.
-- [`test_should_reject_decision_when_payment_is_not_pending`](backend/tests/unit/test_payment_service.py#L199): rozliczonej płatności nie da się ponownie zatwierdzić ani odrzucić.
-- [`test_should_raise_not_found_when_confirming_unknown_payment`](backend/tests/unit/test_payment_service.py#L212): nieznana płatność daje błąd `PAYMENT_NOT_FOUND`.
+- [`test_should_create_pending_payment_and_mark_code_as_used_when_code_is_active`](backend/tests/unit/test_payment_service.py#L67): płatność czeka na decyzję, a kod jest oznaczony jako zużyty.
+- [`test_should_reject_payment_when_code_does_not_exist`](backend/tests/unit/test_payment_service.py#L85): nieznany kod daje błąd `CODE_NOT_FOUND`.
+- [`test_should_reject_payment_when_code_has_expired`](backend/tests/unit/test_payment_service.py#L97): kod starszy niż 120 s daje błąd `CODE_EXPIRED`.
+- [`test_should_reject_payment_when_code_was_already_used`](backend/tests/unit/test_payment_service.py#L110): drugie użycie kodu daje błąd `CODE_NOT_ACTIVE`.
+- [`test_should_keep_code_active_when_amount_is_invalid`](backend/tests/unit/test_payment_service.py#L123): błędna kwota nie zużywa kodu.
+- [`test_should_withdraw_funds_and_record_history_when_payment_is_confirmed`](backend/tests/unit/test_payment_service.py#L136): zatwierdzenie pobiera środki i dodaje wpis do historii.
+- [`test_should_keep_balance_and_pending_status_when_funds_are_insufficient`](backend/tests/unit/test_payment_service.py#L155): przy braku środków saldo i status płatności się nie zmieniają.
+- [`test_should_reject_confirmation_when_payment_has_expired`](backend/tests/unit/test_payment_service.py#L173): po 120 s płatności nie da się zatwierdzić (`PAYMENT_EXPIRED`).
+- [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/unit/test_payment_service.py#L188): odrzucenie nie zmienia salda.
+- [`test_should_reject_decision_when_payment_is_not_pending`](backend/tests/unit/test_payment_service.py#L201): rozliczonej płatności nie da się ponownie zatwierdzić, odrzucić ani anulować.
+- [`test_should_raise_not_found_when_confirming_unknown_payment`](backend/tests/unit/test_payment_service.py#L214): nieznana płatność daje błąd `PAYMENT_NOT_FOUND`.
+- [`test_should_reject_confirmation_when_daily_spending_limit_would_be_exceeded`](backend/tests/unit/test_payment_service.py#L226): zatwierdzenie ponad dzienny limit daje błąd `DAILY_LIMIT_EXCEEDED`, a saldo i status płatności się nie zmieniają.
+- [`test_should_mark_payment_as_cancelled_when_merchant_cancels_it`](backend/tests/unit/test_payment_service.py#L252): anulowanie przez sklep ustawia status `CANCELLED` i nie zmienia salda.
 
 Przelewy: [`test_transfer_service.py`](backend/tests/unit/test_transfer_service.py)
 
-- [`test_should_move_funds_and_record_both_history_entries_when_transfer_succeeds`](backend/tests/unit/test_transfer_service.py#L46): przelew zmienia oba salda i dodaje wpis w historii każdego z kont.
-- [`test_should_reject_transfer_when_recipient_is_sender`](backend/tests/unit/test_transfer_service.py#L71): przelew na własny numer daje błąd `SELF_TRANSFER`.
-- [`test_should_reject_transfer_when_recipient_does_not_exist`](backend/tests/unit/test_transfer_service.py#L84): nieznany numer daje błąd `RECIPIENT_NOT_FOUND`.
-- [`test_should_keep_both_balances_when_sender_has_insufficient_funds`](backend/tests/unit/test_transfer_service.py#L97): przy braku środków nie zmienia się żadne saldo.
-- [`test_should_reject_transfer_when_amount_is_invalid`](backend/tests/unit/test_transfer_service.py#L114): ujemna kwota jest odrzucana.
+- [`test_should_move_funds_and_record_both_history_entries_when_transfer_succeeds`](backend/tests/unit/test_transfer_service.py#L49): przelew zmienia oba salda i dodaje wpis w historii każdego z kont.
+- [`test_should_reject_transfer_when_recipient_is_sender`](backend/tests/unit/test_transfer_service.py#L74): przelew na własny numer daje błąd `SELF_TRANSFER`.
+- [`test_should_reject_transfer_when_recipient_does_not_exist`](backend/tests/unit/test_transfer_service.py#L87): nieznany numer daje błąd `RECIPIENT_NOT_FOUND`.
+- [`test_should_keep_both_balances_when_sender_has_insufficient_funds`](backend/tests/unit/test_transfer_service.py#L100): przy braku środków nie zmienia się żadne saldo.
+- [`test_should_reject_transfer_when_amount_is_invalid`](backend/tests/unit/test_transfer_service.py#L117): ujemna kwota jest odrzucana.
+- [`test_should_reject_transfer_when_daily_spending_limit_would_be_exceeded`](backend/tests/unit/test_transfer_service.py#L141): przelew ponad dzienny limit daje błąd `DAILY_LIMIT_EXCEEDED`, a żadne saldo się nie zmienia.
+- [`test_should_allow_transfer_that_reaches_daily_limit_exactly`](backend/tests/unit/test_transfer_service.py#L159): wydatki równe dokładnie 1 000,00 zł są dozwolone.
+- [`test_should_not_count_spending_from_previous_day_towards_daily_limit`](backend/tests/unit/test_transfer_service.py#L171): wczorajsze wydatki nie liczą się do dzisiejszego limitu.
+- [`test_should_not_count_incoming_money_towards_daily_limit`](backend/tests/unit/test_transfer_service.py#L184): wpływy nie liczą się do limitu.
+
+Numer telefonu: [`test_phone_number.py`](backend/tests/unit/test_phone_number.py)
+
+- [`test_should_return_nine_digits_when_number_is_written_in_common_format`](backend/tests/unit/test_phone_number.py#L17): zapisy „600 200 300”, „600-200-300”, „+48 600 200 300” i „0048600200300” dają „600200300”.
+- [`test_should_reject_number_when_it_is_not_a_nine_digit_polish_number`](backend/tests/unit/test_phone_number.py#L29): numer za krótki, za długi, z literą albo z innym prefiksem kraju jest odrzucany.
+
+Podsumowanie konta: [`test_history_service.py`](backend/tests/unit/test_history_service.py)
+
+- [`test_should_sum_incoming_and_outgoing_money_separately`](backend/tests/unit/test_history_service.py#L40): wpływy i wydatki są liczone osobno, a operacje innych kont pomijane.
+- [`test_should_return_zeros_when_account_has_no_operations`](backend/tests/unit/test_history_service.py#L56): konto bez operacji ma podsumowanie złożone z zer.
+- [`test_should_raise_not_found_when_summarizing_unknown_account`](backend/tests/unit/test_history_service.py#L67): nieznane konto daje błąd `ACCOUNT_NOT_FOUND`.
 
 Pomocnicze: [`test_fields.py`](backend/tests/unit/test_fields.py),
 [`test_clock.py`](backend/tests/unit/test_clock.py)
@@ -227,12 +275,20 @@ Płatności: [`test_payments_api.py`](backend/tests/integration/test_payments_ap
 - [`test_should_keep_balance_when_confirming_without_sufficient_funds`](backend/tests/integration/test_payments_api.py#L107): brak środków daje 422 `INSUFFICIENT_FUNDS`, a saldo i status płatności się nie zmieniają.
 - [`test_should_mark_payment_as_rejected_without_charging_account`](backend/tests/integration/test_payments_api.py#L121): odrzucenie zwraca 200 `REJECTED` i nie zmienia salda.
 - [`test_should_refuse_confirmation_when_payment_has_expired`](backend/tests/integration/test_payments_api.py#L135): po 121 s odpowiedź to 422 `PAYMENT_EXPIRED`, a płatność znika z listy do potwierdzenia.
+- [`test_should_cancel_pending_payment_from_terminal`](backend/tests/integration/test_payments_api.py#L150): `POST /api/payments/{id}/cancel` zwraca 200 `CANCELLED`, płatność znika z listy do potwierdzenia i nie da się jej już zatwierdzić.
 
 Przelewy i historia: [`test_transfers_api.py`](backend/tests/integration/test_transfers_api.py)
 
-- [`test_should_move_funds_between_accounts_when_transfer_is_valid`](backend/tests/integration/test_transfers_api.py#L17): `POST /api/transfers` zwraca 201, a salda wynoszą 380,00 i 1 620,00 PLN.
-- [`test_should_return_not_found_when_recipient_phone_is_unknown`](backend/tests/integration/test_transfers_api.py#L32): nieznany numer daje 404 `RECIPIENT_NOT_FOUND`.
-- [`test_should_show_transfer_in_history_of_both_accounts`](backend/tests/integration/test_transfers_api.py#L45): przelew widać w historii nadawcy i odbiorcy.
+- [`test_should_move_funds_between_accounts_when_transfer_is_valid`](backend/tests/integration/test_transfers_api.py#L24): `POST /api/transfers` zwraca 201, a salda wynoszą 380,00 i 1 620,00 PLN.
+- [`test_should_return_not_found_when_recipient_phone_is_unknown`](backend/tests/integration/test_transfers_api.py#L39): nieznany numer daje 404 `RECIPIENT_NOT_FOUND`.
+- [`test_should_show_transfer_in_history_of_both_accounts`](backend/tests/integration/test_transfers_api.py#L52): przelew widać w historii nadawcy i odbiorcy.
+- [`test_should_accept_recipient_phone_written_with_spaces_and_country_prefix`](backend/tests/integration/test_transfers_api.py#L69): przelew na „+48 600 200 300” trafia do Anny Nowak.
+- [`test_should_reject_transfer_when_daily_spending_limit_is_exceeded`](backend/tests/integration/test_transfers_api.py#L81): po przelewie 600 zł kolejny na 500 zł daje 422 `DAILY_LIMIT_EXCEEDED`.
+
+Podsumowanie konta: [`test_summary_api.py`](backend/tests/integration/test_summary_api.py)
+
+- [`test_should_summarize_money_coming_in_and_out_of_account`](backend/tests/integration/test_summary_api.py#L4): `GET /api/accounts/1/summary` po płatności i wpływie zwraca sumy 100,00 i 25,00 zł oraz 2 operacje.
+- [`test_should_return_not_found_for_summary_of_unknown_account`](backend/tests/integration/test_summary_api.py#L30): nieznane konto daje 404 `ACCOUNT_NOT_FOUND`.
 
 Dokumentacja API: [`test_openapi.py`](backend/tests/integration/test_openapi.py)
 
@@ -270,10 +326,12 @@ Kopię specyfikacji odświeża polecenie `cd backend && flask --app app openapi 
 | POST | `/api/accounts/{account_id}/blik-codes` | aplikacja bankowa | wygenerowanie kodu BLIK (poprzedni aktywny kod zostaje anulowany) | 201, 404 |
 | GET | `/api/accounts/{account_id}/pending-payments` | aplikacja bankowa | płatności czekające na potwierdzenie | 200, 404 |
 | GET | `/api/accounts/{account_id}/history` | aplikacja bankowa | historia operacji, od najnowszej | 200, 404 |
+| GET | `/api/accounts/{account_id}/summary` | aplikacja bankowa | suma wpływów i wydatków, liczba operacji | 200, 404 |
 | POST | `/api/payments` | terminal sklepu | rozpoczęcie płatności kodem BLIK | 201, 400, 404, 422 |
 | GET | `/api/payments/{payment_id}` | terminal sklepu | status płatności | 200, 404 |
 | POST | `/api/payments/{payment_id}/confirm` | aplikacja bankowa | zatwierdzenie płatności | 200, 404, 422 |
 | POST | `/api/payments/{payment_id}/reject` | aplikacja bankowa | odrzucenie płatności | 200, 404, 422 |
+| POST | `/api/payments/{payment_id}/cancel` | terminal sklepu | anulowanie oczekującej płatności | 200, 404, 422 |
 | POST | `/api/transfers` | aplikacja bankowa | przelew na numer telefonu | 201, 400, 404, 422 |
 
 Kwoty są przesyłane jako tekst z dwoma miejscami po przecinku (`"25.00"`), a daty w formacie ISO 8601
@@ -293,11 +351,12 @@ poszczególnych pól.
 
 | HTTP | `code` | Kiedy |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | niepoprawne dane wejściowe, np. kod nie ma 6 cyfr albo kwota nie jest liczbą |
+| 400 | `VALIDATION_ERROR` | niepoprawne dane wejściowe, np. kod nie ma 6 cyfr, kwota nie jest liczbą albo numer telefonu nie ma 9 cyfr |
 | 404 | `ACCOUNT_NOT_FOUND`, `CODE_NOT_FOUND`, `PAYMENT_NOT_FOUND`, `RECIPIENT_NOT_FOUND` | brak konta, kodu, płatności albo odbiorcy o podanym numerze |
 | 422 | `CODE_EXPIRED`, `CODE_NOT_ACTIVE` | kod wygasł albo został już użyty lub anulowany |
 | 422 | `INVALID_AMOUNT`, `AMOUNT_LIMIT_EXCEEDED` | kwota nie jest dodatnia, ma więcej niż 2 miejsca po przecinku albo przekracza 5 000,00 PLN |
 | 422 | `INSUFFICIENT_FUNDS` | za mało środków na koncie |
+| 422 | `DAILY_LIMIT_EXCEEDED` | operacja przekroczyłaby dzienny limit wydatków 1 000,00 PLN |
 | 422 | `PAYMENT_EXPIRED`, `PAYMENT_NOT_PENDING` | minął czas na potwierdzenie albo płatność jest już rozliczona |
 | 422 | `SELF_TRANSFER` | przelew na własny numer telefonu |
 
@@ -380,9 +439,11 @@ curl -X POST http://localhost:5001/api/payments \
 
 **Warunki wspólne dla wszystkich przypadków:**
 - backend i frontend są uruchomione zgodnie z sekcją [Uruchomienie projektu](#uruchomienie-projektu),
-- w przeglądarce otwarta jest strona http://localhost:5173,
+- otwarte są dwa okna przeglądarki obok siebie: bank (np. http://localhost:5173/konto/1) i sklep
+  (http://localhost:5173/sklep),
+- w sklepie jest koszyk startowy: „Chleb żytni na zakwasie” i „Kawa ziarnista Brazylia Santos”, razem 47,80 zł,
 - baza zawiera tylko konta demonstracyjne. Żeby wrócić do tego stanu przed przypadkiem testowym, zatrzymaj
-  backend, usuń plik `backend/instance/miniblik.db` i uruchom backend ponownie.
+  backend, usuń plik `backend/instance/miniblik.db`, uruchom backend ponownie i odśwież oba okna.
 
 | ID | Tytuł | Sprawdzana reguła |
 |---|---|---|
@@ -396,63 +457,69 @@ curl -X POST http://localhost:5001/api/payments \
 | [TC008](#tc008) | Płatność wygasłym kodem | R2 |
 | [TC009](#tc009) | Ponowne użycie wykorzystanego kodu | R4 |
 | [TC010](#tc010) | Zatwierdzenie płatności bez wystarczających środków | R7 |
-| [TC011](#tc011) | Niepoprawna kwota w terminalu | R5 |
+| [TC011](#tc011) | Kwota zamówienia w sklepie | R5 |
 | [TC012](#tc012) | Przelew na numer telefonu | R9, R10 |
 | [TC013](#tc013) | Przelew na własny i nieistniejący numer | R9 |
+| [TC014](#tc014) | Anulowanie płatności przez sklep | R13 |
+| [TC015](#tc015) | Przekroczenie dziennego limitu wydatków | R12 |
+| [TC016](#tc016) | Przelew na numer zapisany ze spacjami i prefiksem | R11 |
+| [TC017](#tc017) | Podsumowanie wpływów i wydatków | R14 |
+| [TC018](#tc018) | Strona startowa i adresy kont | interfejs |
+| [TC019](#tc019) | Filtr historii operacji | interfejs |
 
 ### TC001
 
 | **ID** | TC001 |
 |---|---|
 | **Tytuł** | Generowanie kodu BLIK |
-| **Warunki początkowe** | Warunki wspólne. W aplikacji bankowej wybrane jest konto „Jan Kowalski (500100200)”. |
-| **Kroki testowe** | 1. W panelu „Aplikacja bankowa” kliknij **Generuj kod BLIK**. |
-| **Oczekiwany rezultat** | Wyświetla się 6-cyfrowy kod (np. „338 456”), pasek pozostałego czasu i napis „Kod ważny jeszcze 2:00”. Licznik maleje co sekundę. Przycisk zmienia nazwę na „Wygeneruj nowy kod”. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarte jest konto http://localhost:5173/konto/1 (Jan Kowalski). |
+| **Kroki testowe** | 1. W menu kliknij **Kod BLIK**.<br>2. Kliknij **Generuj kod BLIK**. |
+| **Oczekiwany rezultat** | Adres zmienia się na `/konto/1/blik`. Wyświetla się 6 cyfr w osobnych polach, pasek pozostałego czasu i napis „Kod ważny jeszcze 2:00”, który maleje co sekundę. Przycisk zmienia nazwę na „Wygeneruj nowy kod”. |
 
 ### TC002
 
 | **ID** | TC002 |
 |---|---|
 | **Tytuł** | Wygaśnięcie kodu po 2 minutach |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
-| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK**.<br>2. Odczekaj 2 minuty bez wykonywania płatności. |
-| **Oczekiwany rezultat** | Po 2 minutach kod znika, a w jego miejscu pojawia się komunikat „Kod BLIK wygasł. Wygeneruj nowy kod.” |
+| **Warunki początkowe** | Wykonany TC001: kod jest widoczny. |
+| **Kroki testowe** | 1. Odczekaj 2 minuty bez płacenia kodem. |
+| **Oczekiwany rezultat** | Kod znika, a w jego miejscu pojawia się komunikat „Kod BLIK wygasł. Wygeneruj nowy kod.” |
 
 ### TC003
 
 | **ID** | TC003 |
 |---|---|
 | **Tytuł** | Nowy kod unieważnia poprzedni |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
-| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod (kod A).<br>2. Kliknij **Wygeneruj nowy kod**.<br>3. W panelu „Terminal sklepu” wpisz nazwę sklepu **Żabka**, kwotę **25,00** i kod A.<br>4. Kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Po kroku 2 aplikacja pokazuje kod inny niż kod A. Po kroku 4 terminal wyświetla „Kod BLIK został już wykorzystany lub anulowany”, a płatność nie powstaje. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/blik`. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod (kod A).<br>2. Kliknij **Wygeneruj nowy kod**.<br>3. W oknie sklepu wpisz kod A i kliknij **Zapłać 47,80 zł**. |
+| **Oczekiwany rezultat** | Po kroku 2 widać kod inny niż kod A. Po kroku 3 sklep pokazuje „Kod BLIK został już wykorzystany lub anulowany” i zostaje na koszyku. |
 
 ### TC004
 
 | **ID** | TC004 |
 |---|---|
 | **Tytuł** | Płatność poprawnym kodem BLIK |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). |
-| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i zapisany kod.<br>3. Kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Terminal pokazuje „25,00 zł”, „Żabka” i status „Oczekuje na potwierdzenie w aplikacji bankowej…”. W aplikacji bankowej w sekcji „Płatności do potwierdzenia” pojawia się „Żabka 25,00 zł” z przyciskami **Zatwierdź** i **Odrzuć**, a wykorzystany kod znika. |
+| **Warunki początkowe** | Warunki wspólne. Saldo Jana Kowalskiego wynosi 500,00 zł, a koszyk w sklepie 47,80 zł. |
+| **Kroki testowe** | 1. W banku na zakładce `/konto/1/blik` kliknij **Generuj kod BLIK** i zapisz kod.<br>2. W sklepie wpisz kod w 6 pól. Można też wkleić wszystkie cyfry naraz.<br>3. Kliknij **Zapłać 47,80 zł**. |
+| **Oczekiwany rezultat** | Przed wpisaniem kodu przycisk „Zapłać 47,80 zł” jest nieaktywny. Po kroku 3 sklep pokazuje „Potwierdź płatność w aplikacji banku”, „Zamówienie KL-000001 · 47,80 zł” i pozostały czas. W banku pojawia się okno „Potwierdź płatność” z odbiorcą „Delikatesy Kłos”, kwotą „47,80 zł” i czasem na decyzję. Zakładka „Kod BLIK” pokazuje „Kod został użyty w płatności. Do kolejnej płatności wygeneruj nowy.” |
 
 ### TC005
 
 | **ID** | TC005 |
 |---|---|
 | **Tytuł** | Zatwierdzenie płatności |
-| **Warunki początkowe** | Wykonany TC004: płatność „Żabka 25,00 zł” czeka na potwierdzenie, saldo Jana Kowalskiego wynosi 500,00 zł. |
-| **Kroki testowe** | 1. W aplikacji bankowej przy płatności „Żabka 25,00 zł” kliknij **Zatwierdź**. |
-| **Oczekiwany rezultat** | Saldo zmienia się na 475,00 zł, a płatność znika z listy do potwierdzenia. W historii operacji pojawia się wpis „Płatność BLIK, Żabka, -25,00 zł”. Terminal w ciągu 2 sekund pokazuje „Płatność zatwierdzona”. |
+| **Warunki początkowe** | Wykonany TC004: okno „Potwierdź płatność” jest otwarte w banku. |
+| **Kroki testowe** | 1. W oknie kliknij **Zatwierdź**.<br>2. W menu kliknij **Pulpit**. |
+| **Oczekiwany rezultat** | Okno znika. Sklep w ciągu 2 sekund pokazuje „Dziękujemy za zakupy!” i „Zamówienie KL-000001 na kwotę 47,80 zł zostało opłacone.” Na pulpicie saldo wynosi 452,20 zł, a w „Ostatnich operacjach” jest wpis „Delikatesy Kłos, Płatność BLIK, -47,80 zł”. |
 
 ### TC006
 
 | **ID** | TC006 |
 |---|---|
 | **Tytuł** | Odrzucenie płatności |
-| **Warunki początkowe** | Wykonany TC004: płatność „Żabka 25,00 zł” czeka na potwierdzenie, saldo wynosi 500,00 zł. |
-| **Kroki testowe** | 1. W aplikacji bankowej przy płatności „Żabka 25,00 zł” kliknij **Odrzuć**. |
-| **Oczekiwany rezultat** | Saldo nadal wynosi 500,00 zł, a w historii operacji nie ma nowych wpisów. Terminal w ciągu 2 sekund pokazuje „Płatność odrzucona”. |
+| **Warunki początkowe** | Wykonany TC004: okno „Potwierdź płatność” jest otwarte w banku. |
+| **Kroki testowe** | 1. W oknie kliknij **Odrzuć**. |
+| **Oczekiwany rezultat** | Sklep pokazuje „Płatność odrzucona” i „Płatność została odrzucona w aplikacji banku. Zamówienie nie zostało złożone.” Saldo nadal wynosi 500,00 zł, a w historii nie ma nowych operacji. |
 
 ### TC007
 
@@ -460,62 +527,116 @@ curl -X POST http://localhost:5001/api/payments \
 |---|---|
 | **Tytuł** | Płatność nieistniejącym kodem |
 | **Warunki początkowe** | Warunki wspólne. Nie wygenerowano żadnego kodu BLIK. |
-| **Kroki testowe** | 1. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i kod **999999**.<br>2. Kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Pod formularzem terminala pojawia się komunikat „Nieprawidłowy kod BLIK”. Formularz zostaje na ekranie i płatność nie powstaje. |
+| **Kroki testowe** | 1. W sklepie wpisz kod **999999**.<br>2. Kliknij **Zapłać 47,80 zł**. |
+| **Oczekiwany rezultat** | Sklep pokazuje „Nieprawidłowy kod BLIK”, a pola kodu są wyczyszczone. Koszyk się nie zmienia i płatność nie powstaje. |
 
 ### TC008
 
 | **ID** | TC008 |
 |---|---|
 | **Tytuł** | Płatność wygasłym kodem |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski”. |
-| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. Odczekaj ponad 2 minuty.<br>3. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **25,00** i zapisany kod.<br>4. Kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Terminal wyświetla komunikat „Kod BLIK wygasł”, a płatność nie powstaje. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/blik`. |
+| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. Odczekaj ponad 2 minuty.<br>3. W sklepie wpisz zapisany kod i kliknij **Zapłać 47,80 zł**. |
+| **Oczekiwany rezultat** | Sklep pokazuje „Kod BLIK wygasł”, a płatność nie powstaje. |
 
 ### TC009
 
 | **ID** | TC009 |
 |---|---|
 | **Tytuł** | Ponowne użycie wykorzystanego kodu |
-| **Warunki początkowe** | Wykonany TC005: płatność kodem została zatwierdzona, a terminal pokazuje „Płatność zatwierdzona”. |
-| **Kroki testowe** | 1. W terminalu kliknij **Nowa płatność**.<br>2. Wpisz kwotę **10,00** i ten sam kod, którym zapłacono w TC004.<br>3. Kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Terminal wyświetla komunikat „Kod BLIK został już wykorzystany lub anulowany”, a druga płatność nie powstaje. |
+| **Warunki początkowe** | Wykonany TC005: sklep pokazuje „Dziękujemy za zakupy!”. |
+| **Kroki testowe** | 1. W sklepie kliknij **Wróć do sklepu**.<br>2. Wpisz ten sam kod, którym zapłacono w TC004.<br>3. Kliknij **Zapłać 47,80 zł**. |
+| **Oczekiwany rezultat** | Sklep pokazuje „Kod BLIK został już wykorzystany lub anulowany”, a druga płatność nie powstaje. |
 
 ### TC010
 
 | **ID** | TC010 |
 |---|---|
 | **Tytuł** | Zatwierdzenie płatności bez wystarczających środków |
-| **Warunki początkowe** | Warunki wspólne. W aplikacji bankowej wybrane jest konto „Piotr Zieliński (700300400)” z saldem 0,00 zł. |
-| **Kroki testowe** | 1. Kliknij **Generuj kod BLIK** i zapisz kod.<br>2. W terminalu wpisz nazwę sklepu **Żabka**, kwotę **5,00** i zapisany kod, a następnie kliknij **Zapłać**.<br>3. W aplikacji bankowej kliknij **Zatwierdź** przy płatności „Żabka 5,00 zł”. |
-| **Oczekiwany rezultat** | Pod listą płatności pojawia się komunikat „Niewystarczające środki na koncie”. Saldo nadal wynosi 0,00 zł, płatność zostaje na liście do potwierdzenia (można ją odrzucić), a terminal dalej pokazuje „Oczekuje na potwierdzenie w aplikacji bankowej…”. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarte jest konto `/konto/3` (Piotr Zieliński, saldo 0,00 zł). |
+| **Kroki testowe** | 1. W menu kliknij **Kod BLIK**, a potem **Generuj kod BLIK**.<br>2. W sklepie wpisz kod i kliknij **Zapłać 47,80 zł**.<br>3. W oknie „Potwierdź płatność” w banku kliknij **Zatwierdź**.<br>4. Kliknij **Odrzuć**. |
+| **Oczekiwany rezultat** | Po kroku 3 w oknie pojawia się „Niewystarczające środki na koncie”, a okno zostaje otwarte. Saldo nadal wynosi 0,00 zł. Po kroku 4 sklep pokazuje „Płatność odrzucona”. |
 
 ### TC011
 
 | **ID** | TC011 |
 |---|---|
-| **Tytuł** | Niepoprawna kwota w terminalu |
-| **Warunki początkowe** | Warunki wspólne. Dla konta „Jan Kowalski” wygenerowano kod BLIK i zapisano go. |
-| **Kroki testowe** | 1. W terminalu wpisz nazwę sklepu **Żabka** i zapisany kod.<br>2. Wpisz kwotę **0** i kliknij **Zapłać**.<br>3. Wpisz kwotę **-5** i kliknij **Zapłać**.<br>4. Wpisz kwotę **5000,01** i kliknij **Zapłać**.<br>5. Wpisz kwotę **abc** i kliknij **Zapłać**.<br>6. Wpisz kwotę **25,00** i kliknij **Zapłać**. |
-| **Oczekiwany rezultat** | Kroki 2 i 3: „Kwota musi być większa od zera”.<br>Krok 4: „Kwota przekracza limit 5000.00 PLN”.<br>Krok 5: „Kwota musi być liczbą”.<br>Po krokach 2–5 płatność nie powstaje, a kod pozostaje ważny. Krok 6: terminal pokazuje „Oczekuje na potwierdzenie w aplikacji bankowej…”. |
+| **Tytuł** | Kwota zamówienia w sklepie |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/blik`. |
+| **Kroki testowe** | 1. W sklepie usuń przyciskiem **−** chleb i kawę.<br>2. Kliknij 4 razy **+** przy „Ekspres kolbowy Barista Pro”.<br>3. W banku kliknij **Generuj kod BLIK**, wpisz kod w sklepie i kliknij **Zapłać 5196,00 zł**.<br>4. Usuń wszystkie ekspresy, dodaj jeden chleb, wpisz ten sam kod jeszcze raz i kliknij **Zapłać 12,90 zł**. |
+| **Oczekiwany rezultat** | Po kroku 1 sklep pokazuje „Koszyk jest pusty. Dodaj produkty, żeby złożyć zamówienie.”, a przycisk „Zapłać 0,00 zł” jest nieaktywny.<br>Po kroku 3: „Kwota przekracza limit 5000.00 PLN”, płatność nie powstaje.<br>Po kroku 4 sklep pokazuje „Potwierdź płatność w aplikacji banku”, czyli odrzucona kwota nie zużyła kodu. |
 
 ### TC012
 
 | **ID** | TC012 |
 |---|---|
 | **Tytuł** | Przelew na numer telefonu |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). Anna Nowak ma saldo 1 500,00 zł. |
-| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **600200300**, kwotę **120,50** i tytuł **Obiad**.<br>2. Kliknij **Wyślij przelew**.<br>3. Zmień konto na „Anna Nowak (600200300)”. |
-| **Oczekiwany rezultat** | Pojawia się komunikat „Przelew został wysłany”. Saldo Jana Kowalskiego wynosi 379,50 zł, a w jego historii jest wpis „Przelew wychodzący, Obiad (do: Anna Nowak), -120,50 zł”. Po zmianie konta saldo Anny Nowak wynosi 1620,50 zł, a w jej historii jest wpis „Przelew przychodzący, Obiad (od: Jan Kowalski), 120,50 zł”. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/przelew` (saldo Jana Kowalskiego 500,00 zł). |
+| **Kroki testowe** | 1. W sekcji „Odbiorcy” kliknij **Anna Nowak**.<br>2. Wpisz kwotę **120,50** i tytuł **Obiad**.<br>3. Kliknij **Wyślij przelew**.<br>4. W menu kliknij **Historia**.<br>5. Otwórz konto `/konto/2` (Anna Nowak). |
+| **Oczekiwany rezultat** | Krok 1 wpisuje numer 600200300. Po kroku 3 pojawia się „Przelew został wysłany”, a pod formularzem „Dostępne środki: 379,50 zł”. W historii Jana jest wpis „Obiad (do: Anna Nowak), Przelew na telefon, -120,50 zł”. Saldo Anny wynosi 1620,50 zł, a w jej ostatnich operacjach jest „Obiad (od: Jan Kowalski), Przelew przychodzący, +120,50 zł”. |
 
 ### TC013
 
 | **ID** | TC013 |
 |---|---|
 | **Tytuł** | Przelew na własny i nieistniejący numer |
-| **Warunki początkowe** | Warunki wspólne. Wybrane jest konto „Jan Kowalski” (saldo 500,00 zł). |
-| **Kroki testowe** | 1. W sekcji „Przelew na telefon” wpisz numer **500100200**, kwotę **10,00** i tytuł **Test**, a następnie kliknij **Wyślij przelew**.<br>2. Zmień numer na **999888777** i kliknij **Wyślij przelew**. |
-| **Oczekiwany rezultat** | Krok 1: „Nie można wysłać przelewu na własny numer telefonu”.<br>Krok 2: „Nie znaleziono odbiorcy o tym numerze telefonu”.<br>Saldo nadal wynosi 500,00 zł, a w historii operacji nie ma nowych wpisów. |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/przelew`. |
+| **Kroki testowe** | 1. Wpisz numer **500100200**, kwotę **10,00** i tytuł **Test**, a następnie kliknij **Wyślij przelew**.<br>2. Zmień numer na **999888777** i kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Krok 1: „Nie można wysłać przelewu na własny numer telefonu”.<br>Krok 2: „Nie znaleziono odbiorcy o tym numerze telefonu”.<br>Pod formularzem nadal widać „Dostępne środki: 500,00 zł”. |
+
+### TC014
+
+| **ID** | TC014 |
+|---|---|
+| **Tytuł** | Anulowanie płatności przez sklep |
+| **Warunki początkowe** | Wykonany TC004: sklep czeka na potwierdzenie, a w banku jest otwarte okno „Potwierdź płatność”. |
+| **Kroki testowe** | 1. W sklepie kliknij **Anuluj płatność**. |
+| **Oczekiwany rezultat** | Sklep pokazuje „Płatność anulowana” i „Płatność została anulowana. Zamówienie nie zostało złożone.” Okno w banku znika w ciągu 2 sekund, a saldo nadal wynosi 500,00 zł. |
+
+### TC015
+
+| **ID** | TC015 |
+|---|---|
+| **Tytuł** | Przekroczenie dziennego limitu wydatków |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/2/przelew` (Anna Nowak, saldo 1500,00 zł, tego dnia bez wydatków). |
+| **Kroki testowe** | 1. Wpisz numer **500100200**, kwotę **600,00** i tytuł **Czynsz**, a następnie kliknij **Wyślij przelew**.<br>2. Wpisz numer **500100200**, kwotę **500,00** i tytuł **Zakupy**, a następnie kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Krok 1: „Przelew został wysłany”.<br>Krok 2: „Przekroczono dzienny limit wydatków 1000.00 PLN”.<br>Pod formularzem widać „Dostępne środki: 900,00 zł”. |
+
+### TC016
+
+| **ID** | TC016 |
+|---|---|
+| **Tytuł** | Przelew na numer zapisany ze spacjami i prefiksem |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarta jest zakładka `/konto/1/przelew` (saldo 500,00 zł). |
+| **Kroki testowe** | 1. Wpisz numer **+48 600 200 300**, kwotę **50,00** i tytuł **Kino**, a następnie kliknij **Wyślij przelew**.<br>2. Wpisz numer **600-200-300**, kwotę **10,00** i tytuł **Kawa**, a następnie kliknij **Wyślij przelew**.<br>3. Wpisz numer **600 200 30**, kwotę **10,00** i tytuł **Za krótki**, a następnie kliknij **Wyślij przelew**. |
+| **Oczekiwany rezultat** | Kroki 1 i 2: „Przelew został wysłany”.<br>Krok 3: „Numer telefonu musi mieć 9 cyfr”.<br>Pod formularzem widać „Dostępne środki: 440,00 zł”. |
+
+### TC017
+
+| **ID** | TC017 |
+|---|---|
+| **Tytuł** | Podsumowanie wpływów i wydatków |
+| **Warunki początkowe** | Warunki wspólne. W oknie banku otwarty jest pulpit `/konto/1`. Kafelki pokazują „Wpływy 0,00 zł”, „Wydatki 0,00 zł” i „Operacje 0”. |
+| **Kroki testowe** | 1. Wykonaj TC004 i TC005 (płatność 47,80 zł).<br>2. Wyślij przelew na numer **600200300** na kwotę **120,50** z tytułem **Obiad**.<br>3. W menu kliknij **Pulpit**.<br>4. Otwórz konto `/konto/2` (Anna Nowak). |
+| **Oczekiwany rezultat** | Po kroku 3 kafelki Jana Kowalskiego pokazują „Wpływy 0,00 zł”, „Wydatki 168,30 zł” i „Operacje 2”.<br>Po kroku 4 kafelki Anny Nowak pokazują „Wpływy 120,50 zł”, „Wydatki 0,00 zł” i „Operacje 1”. |
+
+### TC018
+
+| **ID** | TC018 |
+|---|---|
+| **Tytuł** | Strona startowa i adresy kont |
+| **Warunki początkowe** | Warunki wspólne. |
+| **Kroki testowe** | 1. Otwórz http://localhost:5173.<br>2. Kliknij **Anna Nowak**.<br>3. Wpisz adres http://localhost:5173/konto/99.<br>4. Wpisz adres http://localhost:5173/nie-ma-takiej-strony. |
+| **Oczekiwany rezultat** | Krok 1: nagłówek „Zaloguj się do bankowości”, trzy konta z numerami telefonów i saldami, obok wejście do sklepu.<br>Krok 2: adres `/konto/2`, pulpit Anny Nowak, jej imię i nazwisko w menu.<br>Krok 3: „Nie znaleziono konta” i przycisk „Wróć do wyboru konta”.<br>Krok 4: przekierowanie na stronę startową. |
+
+### TC019
+
+| **ID** | TC019 |
+|---|---|
+| **Tytuł** | Filtr historii operacji |
+| **Warunki początkowe** | Wykonany TC012. W oknie banku otwarte jest konto `/konto/2` (Anna Nowak). |
+| **Kroki testowe** | 1. Na zakładce **Przelew na telefon** wyślij przelew na numer **500100200** na kwotę **20,00** z tytułem **Kawa**.<br>2. W menu kliknij **Historia**.<br>3. Kliknij filtr **Wpływy**.<br>4. Kliknij filtr **Wydatki**. |
+| **Oczekiwany rezultat** | Po kroku 2 filtry pokazują „Wszystkie 2”, „Wpływy 1” i „Wydatki 1”.<br>Po kroku 3 na liście jest tylko „Obiad (od: Jan Kowalski)”.<br>Po kroku 4 na liście jest tylko „Kawa (do: Jan Kowalski)”. |
 
 ## Technologie użyte w projekcie
 
@@ -526,6 +647,8 @@ curl -X POST http://localhost:5001/api/payments \
 | Baza danych i ORM | SQLite, Flask-SQLAlchemy, SQLAlchemy | 3.1.1, 2.1.5 |
 | REST API i dokumentacja | flask-smorest (OpenAPI 3, Swagger UI), marshmallow | 0.47.0, 4.3.1 |
 | Frontend | React, Vite | 19.3.1, 8.3.4 |
+| Adresy stron we frontendzie | React Router | 8.4.0 |
+| Fonty (dołączone lokalnie) | IBM Plex Sans, IBM Plex Mono, Bitter (@fontsource) | 5.3.0 |
 | Testy | pytest, pytest-cov | 9.1.1, 7.1.0 |
 | Analiza statyczna | ruff (backend), oxlint (frontend) | 0.17.1, 1.89.0 |
 | CI | GitHub Actions | – |
@@ -540,8 +663,8 @@ curl -X POST http://localhost:5001/api/payments \
 │   │   ├── amounts/       reguły walidacji kwot
 │   │   ├── codes/         kody BLIK i ich generator
 │   │   ├── payments/      płatności BLIK
-│   │   ├── transfers/     przelewy na numer telefonu
-│   │   ├── history/       historia operacji
+│   │   ├── transfers/     przelewy na numer telefonu i normalizacja numeru
+│   │   ├── history/       historia operacji, podsumowanie konta, dzienny limit wydatków
 │   │   ├── __init__.py    fabryka aplikacji create_app()
 │   │   ├── container.py   składanie serwisów i ich zależności
 │   │   ├── errors.py      kody błędów i wspólny format odpowiedzi błędu
@@ -554,17 +677,21 @@ curl -X POST http://localhost:5001/api/payments \
 │   └── requirements*.txt
 ├── frontend/
 │   └── src/
-│       ├── components/    BankApp, BlikCodeCard, PendingPayments, TransferForm, History, MerchantTerminal
+│       ├── pages/
+│       │   ├── home/      strona startowa
+│       │   ├── bank/      bankowość: menu, pulpit, kod BLIK, przelew, historia, okno potwierdzenia
+│       │   └── shop/      sklep: produkty, koszyk, pole kodu BLIK, oczekiwanie na bank
+│       ├── components/    ikony SVG
+│       ├── hooks/         usePolling (odświeżanie co 2 s), useNow (odliczanie czasu)
 │       ├── api.js         klient REST API
-│       ├── format.js      formatowanie kwot, dat i kodów
-│       └── hooks/         usePolling (odświeżanie statusu co 2 s)
+│       └── format.js      formatowanie kwot, dat, numerów telefonu
 ├── docs/                  zrzuty ekranu i specyfikacja OpenAPI
 └── .github/workflows/     GitHub Actions
 ```
 
 Każdy moduł backendu ma ten sam podział warstw: `routes.py` (HTTP) → `service.py` (reguły biznesowe) →
 `repository.py` (baza danych). Część reguł należy do modeli, np. `Account.withdraw()`,
-`BlikCode.use()` i `Payment.confirm()`.
+`BlikCode.use()`, `Payment.confirm()` i `Payment.cancel()`.
 
 ### Jakość kodu
 
@@ -578,6 +705,9 @@ Każdy moduł backendu ma ten sam podział warstw: `routes.py` (HTTP) → `servi
 | schematy marshmallow | DTO | API nie wystawia modeli bazy danych |
 | `container.py` | composition root | zależności składane w jednym miejscu |
 | `errors.py` | pojedyncza odpowiedzialność (S z SOLID) | jeden format błędów i mapowanie na kody HTTP |
+| `DailySpendingLimit` | pojedyncza odpowiedzialność, wstrzykiwanie zależności | jedna klasa pilnuje limitu dla płatności i przelewów |
+| `AccountSummary` | Value Object (niezmienna `dataclass`) | wynik podsumowania ma typ i nie miesza logiki z serwisem |
+| pole `PhoneNumber` | ponowne użycie przez dziedziczenie pola marshmallow | normalizacja numeru w jednym miejscu |
 
 Zasady obowiązujące w kodzie:
 - nazwy klas, funkcji i zmiennych są po angielsku, a teksty w interfejsie po polsku,
